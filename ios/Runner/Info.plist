@@ -51,5 +51,17 @@
 	<string>We need access to your camera to let you take item and bill photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo gallery to upload item and bill images.</string>
+
+	<!-- Ditto Live Bluetooth, Local Network, and Bonjour Permissions -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Uses Bluetooth to connect and sync with nearby devices</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Uses Bluetooth to connect and sync with nearby devices</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Uses WiFi to connect and sync with nearby devices</string>
+	<key>NSBonjourServices</key>
+	<array>
+	  <string>_http-alt._tcp.</string>
+	</array>
 </dict>
 </plist>

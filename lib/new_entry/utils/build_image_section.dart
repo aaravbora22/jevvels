@@ -2,8 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+typedef ImagesChanged = void Function(File? billImage, File? itemImage);
+
 class BuildImageSection extends StatefulWidget {
-  const BuildImageSection({super.key});
+  final File? billImage;
+  final File? itemImage;
+  final ImagesChanged? onImagesChanged;
+  const BuildImageSection(
+      {super.key, this.billImage, this.itemImage, this.onImagesChanged});
 
   @override
   State<BuildImageSection> createState() => _BuildImageSectionState();
@@ -13,6 +19,24 @@ class _BuildImageSectionState extends State<BuildImageSection> {
   File? billImage;
   File? itemImage;
   final picker = ImagePicker();
+
+  void _notifyParent() {
+    if (widget.onImagesChanged != null) {
+      widget.onImagesChanged!(billImage, itemImage);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildImageSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If parent changes the image, update local state
+    if (widget.billImage != billImage || widget.itemImage != itemImage) {
+      setState(() {
+        billImage = widget.billImage;
+        itemImage = widget.itemImage;
+      });
+    }
+  }
 
   Future<void> pickImage(bool isBill, {bool fromCamera = false}) async {
     final picked = await picker.pickImage(
@@ -25,6 +49,7 @@ class _BuildImageSectionState extends State<BuildImageSection> {
         } else {
           itemImage = File(picked.path);
         }
+        _notifyParent();
       });
     }
   }
@@ -78,6 +103,13 @@ class _BuildImageSectionState extends State<BuildImageSection> {
         ),
       ],
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    billImage = widget.billImage;
+    itemImage = widget.itemImage;
   }
 
   @override

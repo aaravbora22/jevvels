@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jevvels/widgets/build_text_field.dart';
 
+typedef PricingChanged = void Function(Map<String, dynamic> pricing);
+
 class BuildPricingSection extends StatefulWidget {
-  const BuildPricingSection({super.key});
+  final PricingChanged? onPricingChanged;
+  const BuildPricingSection({super.key, this.onPricingChanged});
 
   @override
   State<BuildPricingSection> createState() => _BuildPricingSectionState();
@@ -14,6 +17,17 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
   final TextEditingController priceController = TextEditingController();
   final TextEditingController makingCostController = TextEditingController();
   final TextEditingController metalRateController = TextEditingController();
+
+  void _notifyParent() {
+    if (widget.onPricingChanged != null) {
+      widget.onPricingChanged!({
+        'currency': _currency,
+        'totalPrice': priceController.text,
+        'makingCost': makingCostController.text,
+        'metalRate': metalRateController.text,
+      });
+    }
+  }
 
   Widget _buildPricingSection() {
     return Column(
@@ -41,6 +55,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
               onChanged: (val) {
                 setState(() {
                   _currency = val!;
+                  _notifyParent();
                 });
               },
             ),
@@ -51,6 +66,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
                 controller: priceController,
                 keyboardType: TextInputType.number,
                 hint: 'Amount Paid',
+                onChanged: (_) => _notifyParent(),
               ),
             ),
           ],
@@ -60,14 +76,16 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
           label: 'Making Cost',
           controller: makingCostController,
           keyboardType: TextInputType.number,
-          hint: 'e.g. 500',
+          hint: 'per gram',
+          onChanged: (_) => _notifyParent(),
         ),
         const SizedBox(height: 10),
         BuildTextField(
           label: 'Precious Metal Rate',
           controller: metalRateController,
           keyboardType: TextInputType.number,
-          hint: 'e.g. 6000/g',
+          hint: 'e.g. 6000 rs/g',
+          onChanged: (_) => _notifyParent(),
         ),
       ],
     );

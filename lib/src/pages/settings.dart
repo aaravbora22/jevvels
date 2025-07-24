@@ -5,13 +5,16 @@ import 'package:jevvels/authentication/presentation/bloc/auth_event.dart';
 import 'package:jevvels/authentication/presentation/bloc/auth_state.dart'
     as bloc_auth;
 import 'package:jevvels/authentication/presentation/pages/login_page.dart';
+import 'package:jevvels/powersync/powersync_connector.dart';
 import 'package:jevvels/src/components/dashboard/nav_item.dart';
 import 'package:jevvels/src/pages/dashboard.dart';
 import 'package:jevvels/new_entry/new_entry.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Settings extends StatefulWidget {
-  const Settings({super.key});
+  const Settings({
+    super.key,
+  });
 
   @override
   State<Settings> createState() => _SettingsState();
@@ -76,13 +79,14 @@ class _SettingsState extends State<Settings> {
   }
 
   // logout button pressed (uses AuthBloc if available, else fallback to Supabase)
-  void logout() {
+  Future<void> logout() async {
     try {
       final bloc = BlocProvider.of<AuthBloc>(context, listen: false);
       bloc.add(AuthSignOutRequested());
     } catch (e) {
       // fallback: direct supabase logout if bloc not available
       Supabase.instance.client.auth.signOut();
+      await db.disconnectAndClear();
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginPage()),
         (route) => false,
@@ -212,8 +216,7 @@ class _SettingsState extends State<Settings> {
                   label: 'Home',
                   onTap: () {
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (context) => const Dashboard()),
+                      MaterialPageRoute(builder: (context) => Dashboard()),
                     );
                   },
                 ),

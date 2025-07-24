@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jevvels/widgets/build_text_field.dart';
 
+typedef NotesChanged = void Function(String notes);
+
 class BuildNotesSection extends StatefulWidget {
-  BuildNotesSection({super.key});
+  final NotesChanged? onNotesChanged;
+  BuildNotesSection({super.key, this.onNotesChanged});
 
   @override
   State<BuildNotesSection> createState() => _BuildNotesSectionState();
@@ -17,6 +20,11 @@ class _BuildNotesSectionState extends State<BuildNotesSection> {
       controller: notesController,
       hint: 'Type anything you want us to remember about this entry',
       maxLines: 3,
+      onChanged: (val) {
+        if (widget.onNotesChanged != null) {
+          widget.onNotesChanged!(val);
+        }
+      },
     );
   }
 

@@ -15,7 +15,7 @@ class PortfolioCard extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(20)),
           color: Color(0xFFB99750),
         ),
-        child: const Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Align(
@@ -23,7 +23,7 @@ class PortfolioCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Right Now.',
                     style: TextStyle(
                         color: Colors.white,
@@ -31,18 +31,18 @@ class PortfolioCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Main Font'),
                   ),
-                  Text(
-                    '\$5,250.20',
+                  const Text(
+                    '5,250.20', // Replace with a real value if needed
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 36,
                         fontFamily: 'Main Font',
                         fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
-                  Text(
+                  const Text(
                     'Bought.',
                     style: TextStyle(
                         color: Colors.white,
@@ -50,8 +50,8 @@ class PortfolioCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Main Font'),
                   ),
-                  Text(
-                    '\$4,233.93',
+                  const Text(
+                    '4,233.93', // Replace with a real value or connect to your new storage
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -61,7 +61,7 @@ class PortfolioCard extends StatelessWidget {
                 ],
               ),
             ),
-            Spacer(),
+            const Spacer(),
             Align(
               alignment: Alignment.bottomRight,
               child: Column(
@@ -70,7 +70,7 @@ class PortfolioCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         'Gold',
                         style: TextStyle(
                             fontFamily: 'Main Font',
@@ -78,7 +78,7 @@ class PortfolioCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 16),
                       ),
-                      Text(
+                      const Text(
                         ' 67.3%',
                         style: TextStyle(
                             color: Color(0xFF47143D),
@@ -90,7 +90,7 @@ class PortfolioCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         'Silver',
                         style: TextStyle(
                             fontFamily: 'Main Font',
@@ -98,7 +98,7 @@ class PortfolioCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 16),
                       ),
-                      Text(
+                      const Text(
                         ' 54.3%',
                         style: TextStyle(
                             color: Color(0xFF47143D),
@@ -110,7 +110,7 @@ class PortfolioCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         'Platinum',
                         style: TextStyle(
                             fontFamily: 'Main Font',
@@ -118,7 +118,7 @@ class PortfolioCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 16),
                       ),
-                      Text(
+                      const Text(
                         ' 3.3%',
                         style: TextStyle(
                           color: Color(0xFF47143D),

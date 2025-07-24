@@ -10,7 +10,9 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:jevvels/src/components/dashboard/nav_item.dart';
 
 class Dashboard extends StatefulWidget {
-  const Dashboard({super.key});
+  const Dashboard({
+    super.key,
+  });
 
   @override
   State<Dashboard> createState() => _DashboardState();

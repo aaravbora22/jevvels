@@ -60,12 +60,13 @@ class BuildTextField extends StatelessWidget {
           maxLines: maxLines,
           keyboardType: keyboardType,
           onTap: onTap,
-          style: textStyle ??
-              const TextStyle(
-                color: Colors.white,
-                fontFamily: 'Main Font',
-                fontSize: 16, // Default if not passed
-              ),
+          style: (textStyle ??
+                  const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Main Font',
+                    fontSize: 16, // Default if not passed
+                  ))
+              .copyWith(color: Colors.white),
           decoration: _inputDecoration(hint: hint),
           validator: (value) =>
               value == null || value.isEmpty ? 'Required' : null,

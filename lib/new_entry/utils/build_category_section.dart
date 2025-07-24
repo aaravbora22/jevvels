@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:jevvels/new_entry/utils/input_decoration.dart';
 import 'package:jevvels/widgets/build_text_field.dart';
 
+typedef CategoryChanged = void Function(
+    String category, String? customCategory);
+
 class BuildCategorySection extends StatefulWidget {
-  const BuildCategorySection({super.key});
+  final CategoryChanged? onCategoryChanged;
+  const BuildCategorySection({super.key, this.onCategoryChanged});
 
   @override
   State<BuildCategorySection> createState() => _BuildCategorySectionState();
@@ -12,6 +16,25 @@ class BuildCategorySection extends StatefulWidget {
 class _BuildCategorySectionState extends State<BuildCategorySection> {
   String selectedCategory = 'Necklace';
   String? customCategory;
+  late TextEditingController customCategoryController;
+
+  @override
+  void initState() {
+    super.initState();
+    customCategoryController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    customCategoryController.dispose();
+    super.dispose();
+  }
+
+  void _notifyParent() {
+    if (widget.onCategoryChanged != null) {
+      widget.onCategoryChanged!(selectedCategory, customCategory);
+    }
+  }
 
   Widget _buildCategorySection() {
     final isOther = selectedCategory == 'Other';
@@ -42,7 +65,11 @@ class _BuildCategorySectionState extends State<BuildCategorySection> {
           onChanged: (value) {
             setState(() {
               selectedCategory = value!;
-              if (value != 'Other') customCategory = null;
+              if (value != 'Other') {
+                customCategory = null;
+                customCategoryController.text = '';
+              }
+              _notifyParent();
             });
           },
         ),
@@ -51,11 +78,11 @@ class _BuildCategorySectionState extends State<BuildCategorySection> {
             padding: const EdgeInsets.only(top: 10),
             child: BuildTextField(
               label: 'Custom Category',
-              controller: TextEditingController()
-                ..text = customCategory ?? ''
-                ..selection = TextSelection.fromPosition(
-                    TextPosition(offset: (customCategory ?? '').length)),
-              onChanged: (val) => customCategory = val,
+              controller: customCategoryController,
+              onChanged: (val) {
+                customCategory = val;
+                _notifyParent();
+              },
             ),
           )
       ],
