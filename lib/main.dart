@@ -9,7 +9,7 @@ import 'package:jevvels/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:jevvels/authentication/presentation/pages/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:jevvels/new_entry/supabase_powersync_images.dart';
-import 'package:jevvels/new_entry/supabase_storage_adapter';
+import 'package:jevvels/new_entry/supabase_storage_adapter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'powersync/powersync_connector.dart';
 

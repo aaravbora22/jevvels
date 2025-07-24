@@ -160,10 +160,12 @@ class _SimpleFormState extends State<SimpleForm> {
                     ),
                     const SizedBox(height: 16),
                     // Total Price with Currency
-                    Text('Total Price / Amount Paid', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Total Price / Amount Paid',
+                        style: Theme.of(context).textTheme.titleMedium),
                     Container(
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
@@ -207,9 +209,12 @@ class _SimpleFormState extends State<SimpleForm> {
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               onTap: () {
-                                if (_totalPriceController.text == '' || _totalPriceController.text == '0000') {
+                                if (_totalPriceController.text == '' ||
+                                    _totalPriceController.text == '0000') {
                                   setState(() {
                                     _totalPriceController.text = '';
                                   });
@@ -226,10 +231,12 @@ class _SimpleFormState extends State<SimpleForm> {
                     ),
                     const SizedBox(height: 16),
                     // Making Cost with Currency
-                    Text('Making Cost', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Making Cost',
+                        style: Theme.of(context).textTheme.titleMedium),
                     Container(
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
@@ -273,9 +280,12 @@ class _SimpleFormState extends State<SimpleForm> {
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               onTap: () {
-                                if (_makingCostController.text == '' || _makingCostController.text == '0000') {
+                                if (_makingCostController.text == '' ||
+                                    _makingCostController.text == '0000') {
                                   setState(() {
                                     _makingCostController.text = '';
                                   });
@@ -292,7 +302,8 @@ class _SimpleFormState extends State<SimpleForm> {
                     ),
                     const SizedBox(height: 16),
                     // Precious Metals Grid
-                    Text('Select Precious Metals:', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Select Precious Metals:',
+                        style: Theme.of(context).textTheme.titleMedium),
                     Wrap(
                       spacing: 8.0,
                       children: _metals.map((metal) {
@@ -369,7 +380,8 @@ class _SimpleFormState extends State<SimpleForm> {
                         icon: const Icon(Icons.check),
                         label: const Text('Submit'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -381,13 +393,22 @@ class _SimpleFormState extends State<SimpleForm> {
                             final extractedInfo = {
                               'shop_name': _shopName.isEmpty ? null : _shopName,
                               'location': _location.isEmpty ? null : _location,
-                              'date_purchased': _datePurchased?.toIso8601String() ?? null,
+                              'date_purchased':
+                                  _datePurchased?.toIso8601String() ?? null,
                               'currency': _currency,
-                              'total_price': _totalPriceController.text.isEmpty ? null : _totalPriceController.text,
-                              'making_cost': _makingCostController.text.isEmpty ? null : _makingCostController.text,
-                              'precious_metals': _selectedMetals.isEmpty ? null : _selectedMetals,
-                              'precious_metal_rate': _metalRate.isEmpty ? null : _metalRate,
-                              'item_details': _itemDetails.isEmpty ? null : _itemDetails,
+                              'total_price': _totalPriceController.text.isEmpty
+                                  ? null
+                                  : _totalPriceController.text,
+                              'making_cost': _makingCostController.text.isEmpty
+                                  ? null
+                                  : _makingCostController.text,
+                              'precious_metals': _selectedMetals.isEmpty
+                                  ? null
+                                  : _selectedMetals,
+                              'precious_metal_rate':
+                                  _metalRate.isEmpty ? null : _metalRate,
+                              'item_details':
+                                  _itemDetails.isEmpty ? null : _itemDetails,
                             };
                             showDialog(
                               context: context,
@@ -398,7 +419,8 @@ class _SimpleFormState extends State<SimpleForm> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(context).pop(),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
                                     child: const Text('OK'),
                                   ),
                                 ],

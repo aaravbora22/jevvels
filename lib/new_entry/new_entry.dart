@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:jevvels/new_entry/supabase_storage_adapter';
+import 'package:jevvels/new_entry/supabase_storage_adapter.dart';
 import 'package:jevvels/new_entry/utils/build_category_section.dart';
 import 'package:jevvels/new_entry/utils/build_image_section.dart';
 import 'package:jevvels/new_entry/utils/build_metals_section.dart';
@@ -186,18 +186,30 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
             BuildImageSection(
               billImage: _billImage,
               itemImage: _itemImage,
-              onImagesChanged: (bill, item) async {
-                // Handle bill image
-                if (bill != null) {
+              onImagesChanged: (File? bill, File? item) async {
+                // —— Bill image logic (only if it's a new file) ——
+                if (bill != null && bill.path != _billImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
-                    _billImageId ??= _uuid.v4();
-                    setState(() => _billImage = bill);
-                    await db.execute(
-                      'INSERT INTO bill_images (id, path) VALUES (?, ?)',
-                      [_billImageId, bill.path],
+                    // check existing row
+                    final existing = await db.execute(
+                      'SELECT id FROM bill_images WHERE path = ?',
+                      [bill.path],
                     );
-                    await _copyAndQueue(bill, _billImageId!);
+                    final billId = existing.isNotEmpty
+                        ? existing.first['id'] as String
+                        : _uuid.v4();
+                    if (existing.isEmpty) {
+                      await db.execute(
+                        'INSERT INTO bill_images (id, path) VALUES (?, ?)',
+                        [billId, bill.path],
+                      );
+                    }
+                    setState(() {
+                      _billImage = bill;
+                      _billImageId = billId;
+                    });
+                    await _copyAndQueue(bill, billId);
                   } else {
                     setState(() {
                       _billImage = null;
@@ -205,17 +217,29 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                     });
                   }
                 }
-                // Handle item image
-                if (item != null) {
+
+                // —— Item image logic (only if it's a new file) ——
+                if (item != null && item.path != _itemImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
-                    _itemImageId ??= _uuid.v4();
-                    setState(() => _itemImage = item);
-                    await db.execute(
-                      'INSERT INTO item_images (id, path) VALUES (?, ?)',
-                      [_itemImageId, item.path],
+                    final existing = await db.execute(
+                      'SELECT id FROM item_images WHERE path = ?',
+                      [item.path],
                     );
-                    await _copyAndQueue(item, _itemImageId!);
+                    final itemId = existing.isNotEmpty
+                        ? existing.first['id'] as String
+                        : _uuid.v4();
+                    if (existing.isEmpty) {
+                      await db.execute(
+                        'INSERT INTO item_images (id, path) VALUES (?, ?)',
+                        [itemId, item.path],
+                      );
+                    }
+                    setState(() {
+                      _itemImage = item;
+                      _itemImageId = itemId;
+                    });
+                    await _copyAndQueue(item, itemId);
                   } else {
                     setState(() {
                       _itemImage = null;

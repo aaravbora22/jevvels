@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:jevvels/api/gold_api.dart';
 import 'package:jevvels/src/components/dashboard/button.dart';
 import 'package:jevvels/src/components/dashboard/gold_card.dart';
 import 'package:jevvels/src/components/dashboard/list_tile.dart';
 import 'package:jevvels/src/components/dashboard/trading_view_card.dart';
 import 'package:jevvels/src/components/dashboard/portfolio_card.dart';
 import 'package:jevvels/new_entry/new_entry.dart';
+import 'package:jevvels/src/pages/bills.dart';
+import 'package:jevvels/src/pages/items.dart';
 import 'package:jevvels/src/pages/settings.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:jevvels/src/components/dashboard/nav_item.dart';
@@ -104,14 +107,29 @@ class _DashboardState extends State<Dashboard> {
                 child: PageView(
                   controller: _controller,
                   scrollDirection: Axis.horizontal,
-                  children: const [
-                    PortfolioCard(),
-                    GoldPriceCard(
-                      price24k: 72.45,
-                      price22k: 66.10,
-                      price18k: 54.85,
+                  children: [
+                    const PortfolioCard(),
+                    FutureBuilder<Map<String, double>>(
+                      future: GoldPriceService.fetchMetals(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return const Center(
+                              child: Text('Failed to load metal prices',
+                                  style: TextStyle(color: Colors.white)));
+                        }
+                        return GoldPriceCard(
+                          metals: snapshot.data!,
+                          updatedDate:
+                              GoldPriceService.lastFetchDate ?? DateTime.now(),
+                        );
+                      },
                     ),
-                    TradingViewCard(),
+                    const TradingViewCard(),
                   ],
                 ),
               ),
@@ -156,19 +174,37 @@ class _DashboardState extends State<Dashboard> {
               const SizedBox(
                 height: 15,
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15.0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     // bills button
                     MyButton(
-                        iconImagePath: 'assets/icons/bill.png',
-                        buttonText: 'Bills'),
+                      iconImagePath: 'assets/icons/bill.png',
+                      buttonText: 'Bills',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BillsPage(),
+                          ),
+                        );
+                      },
+                    ),
                     // items button
                     MyButton(
-                        iconImagePath: 'assets/icons/items.png',
-                        buttonText: 'Items'),
+                      iconImagePath: 'assets/icons/items.png',
+                      buttonText: 'Items',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ItemsPage(),
+                          ),
+                        );
+                      },
+                    ),
                     // gold button
                     MyButton(
                         iconImagePath: 'assets/icons/gold.png',
