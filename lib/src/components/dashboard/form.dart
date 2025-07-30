@@ -18,8 +18,8 @@ class _SimpleFormState extends State<SimpleForm> {
   String _metalRate = '';
   String _itemDetails = '';
   DateTime? _datePurchased;
-  List<String> _selectedMetals = [];
-  List<String> _metals = ['Gold', 'Silver', 'Platinum'];
+  final List<String> _selectedMetals = [];
+  final List<String> _metals = ['Gold', 'Silver', 'Platinum'];
   String _customMetal = '';
 
   final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'JPY'];
@@ -106,7 +106,7 @@ class _SimpleFormState extends State<SimpleForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    Center(
+                    const Center(
                       child: Text(
                         'Enter Jewellery Billing Details',
                       ),
@@ -394,7 +394,7 @@ class _SimpleFormState extends State<SimpleForm> {
                               'shop_name': _shopName.isEmpty ? null : _shopName,
                               'location': _location.isEmpty ? null : _location,
                               'date_purchased':
-                                  _datePurchased?.toIso8601String() ?? null,
+                                  _datePurchased?.toIso8601String(),
                               'currency': _currency,
                               'total_price': _totalPriceController.text.isEmpty
                                   ? null
@@ -446,8 +446,8 @@ class _SimpleFormState extends State<SimpleForm> {
             ),
           );
         },
-        child: const Icon(Icons.arrow_back),
         backgroundColor: Colors.blue[300],
+        child: const Icon(Icons.arrow_back),
       ),
     );
   }

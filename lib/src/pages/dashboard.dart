@@ -109,26 +109,7 @@ class _DashboardState extends State<Dashboard> {
                   scrollDirection: Axis.horizontal,
                   children: [
                     const PortfolioCard(),
-                    FutureBuilder<Map<String, double>>(
-                      future: GoldPriceService.fetchMetals(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return const Center(
-                              child: Text('Failed to load metal prices',
-                                  style: TextStyle(color: Colors.white)));
-                        }
-                        return GoldPriceCard(
-                          metals: snapshot.data!,
-                          updatedDate:
-                              GoldPriceService.lastFetchDate ?? DateTime.now(),
-                        );
-                      },
-                    ),
+                    const GoldPriceCard(),
                     const TradingViewCard(),
                   ],
                 ),

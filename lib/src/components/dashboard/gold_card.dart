@@ -1,17 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class GoldPriceCard extends StatelessWidget {
-  final Map<String, double> metals;
-  final DateTime updatedDate;
+class GoldPriceCard extends StatefulWidget {
+  const GoldPriceCard({super.key});
 
-  const GoldPriceCard({
-    super.key,
-    required this.metals,
-    required this.updatedDate,
-  });
+  @override
+  State<GoldPriceCard> createState() => _GoldPriceCardState();
+}
+
+class _GoldPriceCardState extends State<GoldPriceCard> {
+  Map<String, double>? metals;
+  DateTime? updatedDate;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMetals();
+  }
+
+  Future<void> _fetchMetals() async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final data = await Supabase.instance.client
+          .from('metals_cache')
+          .select('metal, price_in_inr, fetched_at')
+          .eq('fetched_at', today)
+          .order('metal', ascending: true)
+          .then((result) => result as List<dynamic>);
+      final metalsMap = <String, double>{};
+      for (final row in data) {
+        metalsMap[row['metal']] = (row['price_in_inr'] as num).toDouble();
+      }
+      setState(() {
+        metals = metalsMap;
+        updatedDate = data.isNotEmpty
+            ? DateTime.parse(data.first['fetched_at'])
+            : DateTime.now();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return const Center(
+          child: Text('Failed to load metal prices',
+              style: TextStyle(color: Colors.white)));
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Container(
@@ -35,16 +81,16 @@ class GoldPriceCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            _buildMetalRow('Gold', metals['gold']),
-            _buildMetalRow('Silver', metals['silver']),
-            _buildMetalRow('Platinum', metals['platinum']),
-            _buildMetalRow('Copper', metals['copper']),
-            _buildMetalRow('Zinc', metals['zinc']),
+            _buildMetalRow('Gold', metals?['gold']),
+            _buildMetalRow('Silver', metals?['silver']),
+            _buildMetalRow('Platinum', metals?['platinum']),
+            _buildMetalRow('Copper', metals?['copper']),
+            _buildMetalRow('Zinc', metals?['zinc']),
             const Spacer(),
             Align(
               alignment: Alignment.bottomRight,
               child: Text(
-                'Updated • ${updatedDate.toLocal().toString().split(' ')[0]}',
+                'Updated • ${updatedDate?.toLocal().toString().split(' ')[0] ?? ''}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
