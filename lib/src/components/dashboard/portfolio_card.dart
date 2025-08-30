@@ -14,6 +14,7 @@ class _PortfolioCardState extends State<PortfolioCard> {
   double boughtValue = 0.0;
   Map<String, double> metalPercentages = {};
   Map<String, double> metalValues = {};
+  Map<String, double> metalTotals = {}; 
   bool _loading = true;
   String? _error;
 
@@ -25,63 +26,54 @@ class _PortfolioCardState extends State<PortfolioCard> {
 
   Future<void> _calculatePortfolio() async {
     try {
-      // Fetch today's rates from Supabase metals_cache
       final today = DateTime.now().toIso8601String().split('T')[0];
       final metalsCache = await Supabase.instance.client
           .from('metals_cache')
           .select('metal, price_in_inr')
           .eq('fetched_at', today)
-          .order('metal', ascending: true)
-          .then((result) => result as List<dynamic>);
+          .order('metal', ascending: true);
       final metalRates = <String, double>{};
       for (final row in metalsCache) {
         metalRates[row['metal'].toString().toLowerCase()] =
             (row['price_in_inr'] as num).toDouble();
       }
 
-      // Fetch jewelry_items
-      final items = await db.execute('SELECT * FROM jewelry_items');
-      // Fetch metals
-      final metals = await db.execute('SELECT * FROM metals');
-      // Fetch pricing_details
-      final pricingDetails = await db.execute('SELECT * FROM pricing_details');
+      final items = await Supabase.instance.client
+          .from('jewelry_items')
+          .select('id')
+          .order('id', ascending: true);
 
       double totalCurrentValue = 0.0;
       double totalBoughtValue = 0.0;
-      Map<String, double> metalTotals = {};
+      metalTotals = {}; // <-- reset here
       Map<String, double> metalCurrentValues = {};
+
+      // Fetch all pricing_details for bought value
+      final pricingDetails = await Supabase.instance.client
+          .from('pricing_details')
+          .select('total_price');
+
+      // Sum all total_price values for boughtValue
+      for (final pd in pricingDetails) {
+        if (pd['total_price'] != null) {
+          totalBoughtValue += (pd['total_price'] as num).toDouble();
+        }
+      }
 
       for (final item in items) {
         final itemId = item['id'];
-        // Get metals for this item
-        final itemMetals =
-            metals.where((m) => m['jewelry_item_id'] == itemId).toList();
+
+        final itemMetals = await Supabase.instance.client
+            .from('metals')
+            .select('type, weight')
+            .eq('jewelry_item_id', itemId);
+
         if (itemMetals.isEmpty) continue;
 
-        // Find dominant metal (highest weight)
-        itemMetals
-            .sort((a, b) => (b['weight'] as num).compareTo(a['weight'] as num));
-        final dominantMetal = itemMetals.first;
-        final dominantWeight = (dominantMetal['weight'] as num).toDouble();
-
-        // Get pricing_details for this item
-        final pd = pricingDetails.firstWhere(
-          (p) => p['jewelry_item_id'] == itemId,
-        );
-        final boughtRate = pd.containsKey('precious_metals_rate')
-            ? (pd['precious_metals_rate'] as num?)?.toDouble() ?? 0.0
-            : 0.0;
-
-        // Calculate bought value for dominant metal
-        final boughtValueForItem = dominantWeight * boughtRate;
-        totalBoughtValue += boughtValueForItem;
-
-        // Calculate current value for all metals in item
         for (final m in itemMetals) {
           final type = m['type'].toString().toLowerCase();
           final weight = (m['weight'] as num).toDouble();
-          final rate = metalRates[type] ??
-              boughtRate; // fallback to boughtRate if not in API
+          final rate = metalRates[type] ?? 0.0;
           final value = weight * rate;
           totalCurrentValue += value;
           metalTotals[type] = (metalTotals[type] ?? 0) + weight;
@@ -89,7 +81,6 @@ class _PortfolioCardState extends State<PortfolioCard> {
         }
       }
 
-      // Calculate percentages
       final totalWeight = metalTotals.values.fold(0.0, (a, b) => a + b);
       final metalPercentagesCalc = <String, double>{};
       metalTotals.forEach((type, weight) {
@@ -97,11 +88,17 @@ class _PortfolioCardState extends State<PortfolioCard> {
             totalWeight > 0 ? (weight / totalWeight) * 100 : 0.0;
       });
 
-      // Capitalize keys for display
       final metalValuesCalc = <String, double>{};
       metalCurrentValues.forEach((type, value) {
         metalValuesCalc[type[0].toUpperCase() + type.substring(1)] = value;
       });
+
+      // Capitalize keys for display in metalTotals
+      final metalTotalsDisplay = <String, double>{};
+      metalTotals.forEach((type, weight) {
+        metalTotalsDisplay[type[0].toUpperCase() + type.substring(1)] = weight;
+      });
+      metalTotals = metalTotalsDisplay;
 
       setState(() {
         currentValue = totalCurrentValue;
@@ -112,7 +109,7 @@ class _PortfolioCardState extends State<PortfolioCard> {
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = "Failed to load portfolio";
         _loading = false;
       });
     }
@@ -190,11 +187,13 @@ class _PortfolioCardState extends State<PortfolioCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: metalPercentages.entries.map((entry) {
+                  final metalKey = entry.key;
+                  final weight = metalTotals[metalKey] ?? 0.0;
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        entry.key,
+                        metalKey,
                         style: const TextStyle(
                             fontFamily: 'Main Font',
                             color: Colors.white,
@@ -209,12 +208,20 @@ class _PortfolioCardState extends State<PortfolioCard> {
                             fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        ' ₹${metalValues[entry.key]?.toStringAsFixed(2) ?? '--'}',
+                        ' ₹${metalValues[metalKey]?.toStringAsFixed(2) ?? '--'}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Main Font',
                             fontWeight: FontWeight.bold,
                             fontSize: 14),
+                      ),
+                      Text(
+                        ' (${weight.toStringAsFixed(2)}g)',
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontFamily: 'Main Font',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                     ],
                   );

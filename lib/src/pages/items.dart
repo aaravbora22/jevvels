@@ -177,6 +177,8 @@ class _ItemsPageState extends State<ItemsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF272424),
       appBar: AppBar(
+                iconTheme: const IconThemeData(color: Color(0xFFB99750)),
+
         title: const Text(
           'Items',
           style: TextStyle(

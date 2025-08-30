@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:jevvels/powersync/powersync_connector.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BillsPage extends StatefulWidget {
   const BillsPage({Key? key}) : super(key: key);
@@ -18,21 +19,69 @@ class _BillsPageState extends State<BillsPage> {
     _fetchBills();
   }
 
+    String? _offlineError;
+
   // method to fetch bills from the database
   Future<void> _fetchBills() async {
-    final result = await db.execute('''
-      SELECT ji.id, ji.notes, ji.total_weight, ji.bill_images_id, ji.category_id,
-             bi.path as bill_image_path, c.name as category,
-             pd.total_price, pd.making_cost, pd.precious_metals_rate
-      FROM jewelry_items ji
-      LEFT JOIN bill_images bi ON ji.bill_images_id = bi.id
-      LEFT JOIN categories c ON ji.category_id = c.id
-      LEFT JOIN pricing_details pd ON pd.jewelry_item_id = ji.id
-      ORDER BY ji.id DESC
-    ''');
-    setState(() {
-      _bills = result;
-    });
+    try {
+      // 1. Try Supabase first
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('jewelry_items')
+          .select('id, notes, total_weight, bill_images_id, category_id, '
+              'categories(name), '
+              'bill_images(path), '
+              'pricing_details(total_price, making_cost, precious_metals_rate)')
+          .order('id', ascending: false);
+
+      // Map Supabase response to your local structure
+      final bills = (response as List)
+          .map<Map<String, dynamic>>((item) => {
+                'id': item['id'],
+                'notes': item['notes'],
+                'total_weight': item['total_weight'],
+                'bill_images_id': item['bill_images_id'],
+                'category_id': item['category_id'],
+                'bill_image_path': item['bill_images']?['path'],
+                'category': item['categories']?['name'],
+                'total_price': item['pricing_details']?['total_price'],
+                'making_cost': item['pricing_details']?['making_cost'],
+                'precious_metals_rate':
+                    item['pricing_details']?['precious_metals_rate'],
+              })
+          .toList();
+
+      setState(() {
+        _bills = bills;
+        _offlineError = null;
+      });
+    } catch (e) {
+      // 2. If Supabase fails, try local SQL
+      try {
+        final result = await db.execute('''
+          SELECT ji.id, ji.notes, ji.total_weight, ji.bill_images_id, ji.category_id,
+                 bi.path as bill_image_path, c.name as category,
+                 pd.total_price, pd.making_cost, pd.precious_metals_rate
+          FROM jewelry_items ji
+          LEFT JOIN bill_images bi ON ji.bill_images_id = bi.id
+          LEFT JOIN categories c ON ji.category_id = c.id
+          LEFT JOIN pricing_details pd ON pd.jewelry_item_id = ji.id
+          ORDER BY ji.id DESC
+        ''');
+        setState(() {
+          _bills = result;
+          _offlineError = result.isEmpty
+              ? "Sorry, you can't view your information without a network connection."
+              : null;
+        });
+      } catch (e2) {
+        setState(() {
+          _bills = [];
+          _offlineError =
+              "Sorry, you can't view your information without a network connection.";
+        });
+      }
+    }
   }
 
   @override
@@ -40,6 +89,7 @@ class _BillsPageState extends State<BillsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF272424),
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Color(0xFFB99750)),
         title: const Text(
           'Bills',
           style: TextStyle(
@@ -53,10 +103,10 @@ class _BillsPageState extends State<BillsPage> {
         elevation: 0,
       ),
       body: _bills.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
-                'No bills found.',
-                style: TextStyle(
+                _offlineError ?? 'No bills found.',
+                style: const TextStyle(
                   color: Colors.white54,
                   fontFamily: 'Main Font',
                   fontSize: 20,

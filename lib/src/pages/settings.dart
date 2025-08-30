@@ -232,9 +232,7 @@ class _SettingsState extends State<Settings> {
                   icon: Icons.settings_outlined,
                   label: 'Settings',
                   onTap: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const Settings()),
-                    );
+                    
                   },
                 ),
               ],
