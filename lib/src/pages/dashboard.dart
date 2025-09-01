@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jevvels/src/components/dashboard/button.dart';
 import 'package:jevvels/src/components/dashboard/gold_card.dart';
-import 'package:jevvels/src/components/dashboard/list_tile.dart';
+import 'package:jevvels/src/components/dashboard/list_tile_dashboard.dart';
 import 'package:jevvels/src/components/dashboard/trading_view_card.dart';
 import 'package:jevvels/src/components/dashboard/portfolio_card.dart';
 import 'package:jevvels/new_entry/new_entry.dart';
@@ -13,9 +13,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:jevvels/src/components/dashboard/nav_item.dart';
 
 class Dashboard extends StatefulWidget {
-  const Dashboard({
-    super.key,
-  });
+  const Dashboard({super.key});
 
   @override
   State<Dashboard> createState() => _DashboardState();
@@ -27,7 +25,7 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> _refreshDashboard() async {
     setState(() {
-      _cardsKey = UniqueKey(); 
+      _cardsKey = UniqueKey();
     });
   }
 
@@ -38,16 +36,14 @@ class _DashboardState extends State<Dashboard> {
         color: const Color.fromARGB(255, 39, 36, 36),
         elevation: 0,
         child: SizedBox(
-          height: 55, // Set the actual height of the nav bar
+          height: 55,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               NavItem(
                 icon: Icons.home_outlined,
                 label: 'Home',
-                onTap: () {
-                  // Navigate to home
-                },
+                onTap: () {},
               ),
               NavItem(
                 icon: Icons.add_outlined,
@@ -55,8 +51,7 @@ class _DashboardState extends State<Dashboard> {
                 onTap: () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const JewelryFormPage(),
-                    ),
+                        builder: (context) => const JewelryFormPage()),
                   );
                 },
               ),
@@ -65,9 +60,7 @@ class _DashboardState extends State<Dashboard> {
                 label: 'Settings',
                 onTap: () {
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const Settings(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const Settings()),
                   );
                 },
               ),
@@ -118,10 +111,10 @@ class _DashboardState extends State<Dashboard> {
                     controller: _controller,
                     key: _cardsKey,
                     scrollDirection: Axis.horizontal,
-                    children: [
-                      const PortfolioCard(),
-                      const GoldPriceCard(),
-                      const TradingViewCard(),
+                    children: const [
+                      PortfolioCard(),
+                      GoldPriceCard(),
+                      TradingViewCard(),
                     ],
                   ),
                 ),
@@ -131,9 +124,11 @@ class _DashboardState extends State<Dashboard> {
                 // Indicator + Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      icon:
+                          const Icon(Icons.arrow_back_ios, color: Colors.white),
                       onPressed: () {
                         _controller.previousPage(
                           duration: const Duration(milliseconds: 300),
@@ -163,74 +158,122 @@ class _DashboardState extends State<Dashboard> {
                     ),
                   ],
                 ),
-                const SizedBox(
-                  height: 15,
-                ),
+
+                const SizedBox(height: 15),
+
+                // Quick actions (Bills / Items / Metals)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // bills button
-                      MyButton(
-                        iconImagePath: 'assets/icons/bill.png',
-                        buttonText: 'Bills',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const BillsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      // items button
-                      MyButton(
-                        iconImagePath: 'assets/icons/items.png',
-                        buttonText: 'Items',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ItemsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      // gold button
-                      MyButton(
-                          iconImagePath: 'assets/icons/gold.png',
-                          buttonText: 'Metals',
-                          onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const MetalsPage(),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final allowWrap = c.maxWidth < 360;
+                      final spacing = 12.0;
+
+                      if (allowWrap) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6.0),
+                          child: Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            alignment: WrapAlignment.spaceAround,
+                            children: [
+                              MyButton(
+                                iconImagePath: 'assets/icons/bill.png',
+                                buttonText: 'Bills',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const BillsPage()),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                          )
-                    ],
+                              MyButton(
+                                iconImagePath: 'assets/icons/items.png',
+                                buttonText: 'Items',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ItemsPage()),
+                                  );
+                                },
+                              ),
+                              MyButton(
+                                iconImagePath: 'assets/icons/gold.png',
+                                buttonText: 'Metals',
+                                onPressed: () {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const MetalsPage()),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          MyButton(
+                            iconImagePath: 'assets/icons/bill.png',
+                            buttonText: 'Bills',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const BillsPage()),
+                              );
+                            },
+                          ),
+                          MyButton(
+                            iconImagePath: 'assets/icons/items.png',
+                            buttonText: 'Items',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ItemsPage()),
+                              );
+                            },
+                          ),
+                          MyButton(
+                            iconImagePath: 'assets/icons/gold.png',
+                            buttonText: 'Metals',
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                    builder: (context) => const MetalsPage()),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
-                // column -> stats + transactions
+
+                // Statistics + Liquidate (responsive, aligned)
                 const Padding(
-                  padding: EdgeInsets.all(30.0),
+                  padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 0),
                   child: Column(
-                    children: [
-                      // statistics
+                    children: const [
                       MyListTile(
-                        icon: Icon(
-                          Icons.bar_chart_outlined,
-                        ),
+                        icon: Icon(Icons.bar_chart_rounded),
                         tileTitle: "Statistics",
                         tileSubtitle: "View your portfolio statistics",
                       ),
+                      SizedBox(height: 8), // small gap between the two tiles
                       MyListTile(
-                        icon: Icon(
-                          Icons.pie_chart_outline,
-                        ),
+                        icon: Icon(Icons.pie_chart_rounded),
                         tileTitle: "Liquidate",
-                        tileSubtitle: "View the liquidation breakwdown",
+                        tileSubtitle: "View the liquidation breakdown",
                       ),
                     ],
                   ),
