@@ -112,7 +112,6 @@ class _SimpleFormState extends State<SimpleForm> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Location Search (simulate Google Maps search)
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Search Shop Location',
@@ -159,7 +158,7 @@ class _SimpleFormState extends State<SimpleForm> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Total Price with Currency
+                    // total price with Currency
                     Text('Total Price / Amount Paid',
                         style: Theme.of(context).textTheme.titleMedium),
                     Container(
@@ -230,7 +229,7 @@ class _SimpleFormState extends State<SimpleForm> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Making Cost with Currency
+                    // making cost wwith currency
                     Text('Making Cost',
                         style: Theme.of(context).textTheme.titleMedium),
                     Container(
@@ -301,7 +300,7 @@ class _SimpleFormState extends State<SimpleForm> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Precious Metals Grid
+                    // precious metals grid
                     Text('Select Precious Metals:',
                         style: Theme.of(context).textTheme.titleMedium),
                     Wrap(
@@ -345,7 +344,7 @@ class _SimpleFormState extends State<SimpleForm> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Metal Rate
+                    //  rate
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Precious Metal Rate',
@@ -360,7 +359,7 @@ class _SimpleFormState extends State<SimpleForm> {
                       onSaved: (value) => _metalRate = value ?? '',
                     ),
                     const SizedBox(height: 16),
-                    // Other Jewellery Item Details
+                    // other jewellery item details
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Other Jewellery Item Details',

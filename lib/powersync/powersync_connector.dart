@@ -7,7 +7,7 @@ import 'package:jevvels/powersync/schema.dart';
 
 late final PowerSyncDatabase db;
 
-/// Postgres Response codes that we cannot recover from by retrying.
+/// postgres REsponse codes that cannot recover from by retrying.
 final List<RegExp> fatalResponseCodes = [
   RegExp(r'^22...$'),
   RegExp(r'^23...$'),

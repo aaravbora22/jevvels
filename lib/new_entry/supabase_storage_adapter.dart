@@ -13,7 +13,7 @@ class SupabaseStorageAdapter extends AbstractRemoteStorageAdapter {
     File file, {
     String mediaType = 'image/jpeg',
   }) async {
-    // Supabase Storage upload API returns void on success
+    // supabase storage upload API returns void on success
     await Supabase.instance.client
         .storage
         .from(bucket)
@@ -26,7 +26,7 @@ class SupabaseStorageAdapter extends AbstractRemoteStorageAdapter {
 
   @override
   Future<void> deleteFile(String filename) async {
-    // Supabase Storage remove API takes a list of paths
+    // supabase storage remove API takes a list of paths
     await Supabase.instance.client
         .storage
         .from(bucket)
@@ -35,7 +35,7 @@ class SupabaseStorageAdapter extends AbstractRemoteStorageAdapter {
 
   @override
   Future<Uint8List> downloadFile(String filename) async {
-    // Supabase Storage download API returns the raw bytes
+    // supabase STorage download API returns the raw bytes
     final data = await Supabase.instance.client
         .storage
         .from(bucket)

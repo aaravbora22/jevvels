@@ -187,7 +187,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
               billImage: _billImage,
               itemImage: _itemImage,
               onImagesChanged: (File? bill, File? item) async {
-                // —— Bill image logic (only if it's a new file) ——
+                // Bill image logic (only if it's a new file)
                 if (bill != null && bill.path != _billImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
@@ -218,7 +218,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                   }
                 }
 
-                // —— Item image logic (only if it's a new file) ——
+                // Item image logic (only if it's a new file)
                 if (item != null && item.path != _itemImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
@@ -305,7 +305,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                 final uuid = Uuid();
                 final jewelryItemId = uuid.v4();
 
-                // Category lookup/insert
+                // category lookup/insert
                 final categoryName = _category ?? _customCategory ?? '';
                 String categoryId;
                 final catRes = await db.execute(
@@ -320,7 +320,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                   );
                 }
 
-                // Shop lookup/insert
+                // shop lookup/insert
                 final shopName = _shopName ?? '';
                 String shopId;
                 final shopRes = await db
@@ -335,7 +335,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                   );
                 }
 
-                // Insert jewelry_item
+                // insert jewelry_item
                 await db.execute(
                   '''
                   INSERT INTO jewelry_items (
@@ -355,7 +355,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                   ],
                 );
 
-                // Metals
+                // metals
                 for (final metal in _metals) {
                   await db.execute(
                     'INSERT INTO metals (id, jewelry_item_id, type, weight, karat) VALUES (?, ?, ?, ?, ?)',
@@ -369,7 +369,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                   );
                 }
 
-                // Pricing details
+                // pricing details
                 if (_pricing != null) {
                   await db.execute(
                     '''

@@ -21,10 +21,8 @@ class _BillsPageState extends State<BillsPage> {
 
     String? _offlineError;
 
-  // method to fetch bills from the database
   Future<void> _fetchBills() async {
     try {
-      // 1. Try Supabase first
       final supabase = Supabase.instance.client;
       final response = await supabase
           .from('jewelry_items')
@@ -34,7 +32,6 @@ class _BillsPageState extends State<BillsPage> {
               'pricing_details(total_price, making_cost, precious_metals_rate)')
           .order('id', ascending: false);
 
-      // Map Supabase response to your local structure
       final bills = (response as List)
           .map<Map<String, dynamic>>((item) => {
                 'id': item['id'],
@@ -56,7 +53,6 @@ class _BillsPageState extends State<BillsPage> {
         _offlineError = null;
       });
     } catch (e) {
-      // 2. If Supabase fails, try local SQL
       try {
         final result = await db.execute('''
           SELECT ji.id, ji.notes, ji.total_weight, ji.bill_images_id, ji.category_id,

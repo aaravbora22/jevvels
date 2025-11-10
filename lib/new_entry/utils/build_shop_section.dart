@@ -32,7 +32,7 @@ class _BuildShopSectionState extends State<BuildShopSection> {
         }
       },
       onTap: () {
-        // Later: integrate Google Places autocomplete picker
+        // to do integrate Google Places autocomplete picker
       },
     );
   }

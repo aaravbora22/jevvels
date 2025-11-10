@@ -48,9 +48,9 @@
 
 	<!-- ✅ Camera & Photo Library Permissions -->
 	<key>NSCameraUsageDescription</key>
-	<string>We need access to your camera to let you take item and bill photos.</string>
+	<string>Jevvels will need access to your camera to let you take item and bill photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photo gallery to upload item and bill images.</string>
+	<string>Jevvels will need access to your photo gallery to upload item and bill images.</string>
 
 	<!-- Ditto Live Bluetooth, Local Network, and Bonjour Permissions -->
 	<key>NSBluetoothAlwaysUsageDescription</key>

@@ -66,7 +66,7 @@ class _GoldPriceCardState extends State<GoldPriceCard> {
         padding: const EdgeInsets.all(20.0),
         decoration: const BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(20)),
-          color: Color(0xFFB99750), // Gold tone
+          color: Color(0xFFB99750), 
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

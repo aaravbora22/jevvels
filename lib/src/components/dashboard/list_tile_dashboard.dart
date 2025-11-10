@@ -16,7 +16,6 @@ class MyListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Colors
     const gold = Color(0xFFB99750);
     const bg = Colors.transparent;
 
@@ -27,7 +26,6 @@ class MyListTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: ListTile(
-          // Ensures everything sits on one line, vertically centered
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           minLeadingWidth: 0,
           leading: Container(
@@ -37,7 +35,6 @@ class MyListTile extends StatelessWidget {
               color: gold,
               borderRadius: BorderRadius.circular(10),
             ),
-            // Center the provided icon inside the gold square
             child: Center(
               child: IconTheme(
                 data: const IconThemeData(size: 22, color: Color.fromARGB(255, 39, 36, 36)),
@@ -45,7 +42,7 @@ class MyListTile extends StatelessWidget {
               ),
             ),
           ),
-          title: const SizedBox.shrink(), // we’ll use title+subtitle in a single block below
+          title: const SizedBox.shrink(), // use title+subtitle in a single block below
           subtitle: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +72,6 @@ class MyListTile extends StatelessWidget {
             ],
           ),
           trailing: const Icon(Icons.chevron_right, color: Colors.white70, size: 20),
-          // Tighten vertical space so the row stays compact but centered
           visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
         ),
       ),

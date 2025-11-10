@@ -13,7 +13,6 @@ class ItemsPage extends StatefulWidget {
 class _ItemsPageState extends State<ItemsPage> {
   Future<void> _deleteItem(Map<String, dynamic> item) async {
     final itemId = item['id'];
-    // Get image IDs and paths
     final jewelry = await db.execute(
         'SELECT bill_images_id, item_images_id FROM jewelry_items WHERE id = ?',
         [itemId]);
@@ -34,7 +33,7 @@ class _ItemsPageState extends State<ItemsPage> {
       itemImagePath = itemImg.isNotEmpty ? itemImg.first['path'] : null;
     }
 
-    // Delete from Supabase storage (use $id.jpg)
+    // delete from Supabase storage 
     final supabase = SupabaseStorageAdapter('images');
     if (billImageId != null) {
       try {
@@ -51,7 +50,6 @@ class _ItemsPageState extends State<ItemsPage> {
       }
     }
 
-    // Delete local files (path column)
     if (billImagePath != null && billImagePath.isNotEmpty) {
       try {
         final file = File(billImagePath);
@@ -73,7 +71,6 @@ class _ItemsPageState extends State<ItemsPage> {
       }
     }
 
-    // Delete from all relevant tables in schema
     // Delete metals
     await db.execute('DELETE FROM metals WHERE jewelry_item_id = ?', [itemId]);
     // Delete pricing_details
@@ -99,10 +96,10 @@ class _ItemsPageState extends State<ItemsPage> {
       await db
           .execute('DELETE FROM attachments_queue WHERE id = ?', [itemImageId]);
     }
-    // Delete jewelry_items (must be before bill_images/item_images/shops for FK constraints)
+    // Delete jewelry_items 
     await db.execute('DELETE FROM jewelry_items WHERE id = ?', [itemId]);
 
-    // Delete bill_images and item_images (after jewelry_items)
+    // Delete bill_images and item_images 
     if (billImageId != null) {
       await db.execute('DELETE FROM bill_images WHERE id = ?', [billImageId]);
     }
@@ -110,7 +107,7 @@ class _ItemsPageState extends State<ItemsPage> {
       await db.execute('DELETE FROM item_images WHERE id = ?', [itemImageId]);
     }
 
-    // Delete shop if unused (after jewelry_items)
+    // Delete shop if unused 
     if (shopId != null) {
       final shopCount = await db.execute(
           'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
@@ -145,7 +142,6 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 
   Future<void> _fetchItems() async {
-    // Get all jewelry items with their item image, category, shop, and total_weight
     final items = await db.execute('''
       SELECT ji.id, ji.total_weight, ji.item_images_id, ji.category_id, ji.shop_id,
              ii.path as item_image_path, c.name as category, s.name as shop
@@ -210,7 +206,7 @@ class _ItemsPageState extends State<ItemsPage> {
                 final metals = _metalsByItem[item['id']] ?? [];
                 final totalWeight =
                     (item['total_weight'] as num?)?.toDouble() ?? 0.0;
-                // Calculate percentages for each metal
+                // calculate percentages for each metal
                 List<_MetalInfo> metalInfos = metals.map((m) {
                   final weight = (m['weight'] as num?)?.toDouble() ?? 0.0;
                   final percent =
@@ -277,7 +273,6 @@ class _ItemsPageState extends State<ItemsPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Item Image
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: item['item_image_path'] != null
@@ -296,7 +291,6 @@ class _ItemsPageState extends State<ItemsPage> {
                                   ),
                           ),
                           const SizedBox(width: 18),
-                          // Info
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

@@ -45,15 +45,15 @@ class _PortfolioCardState extends State<PortfolioCard> {
 
       double totalCurrentValue = 0.0;
       double totalBoughtValue = 0.0;
-      metalTotals = {}; // <-- reset here
+      metalTotals = {}; 
       Map<String, double> metalCurrentValues = {};
 
-      // Fetch all pricing_details for bought value
+      // fetch all pricing_details for bought value
       final pricingDetails = await Supabase.instance.client
           .from('pricing_details')
           .select('total_price');
 
-      // Sum all total_price values for boughtValue
+      // sum all total_price values for boughtValue
       for (final pd in pricingDetails) {
         if (pd['total_price'] != null) {
           totalBoughtValue += (pd['total_price'] as num).toDouble();
@@ -93,7 +93,7 @@ class _PortfolioCardState extends State<PortfolioCard> {
         metalValuesCalc[type[0].toUpperCase() + type.substring(1)] = value;
       });
 
-      // Capitalize keys for display in metalTotals
+      // capitalize keys for display in metalTotals
       final metalTotalsDisplay = <String, double>{};
       metalTotals.forEach((type, weight) {
         metalTotalsDisplay[type[0].toUpperCase() + type.substring(1)] = weight;

@@ -16,23 +16,19 @@ import 'powersync/powersync_connector.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1️⃣ Load env and init Supabase
   await dotenv.load(fileName: '.env');
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  // 2️⃣ Open & initialize your PowerSync DB
   await openPowerSyncDatabase();
 
-  // 3️⃣ Create, init & start watching your attachments queue
   final remoteStorage = SupabaseStorageAdapter('images');
   final attachmentQueue = AttachmentSyncQueue(db, remoteStorage);
   await attachmentQueue.init();
   attachmentQueue.watchIds(fileExtension: 'jpg');
 
-  // 4️⃣ Listen for auth changes to connect/disconnect PowerSync
   Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
     final event = data.event;
     if (event == AuthChangeEvent.signedIn) {
@@ -43,7 +39,6 @@ Future<void> main() async {
     // tokenRefreshed is handled in MyBackendConnector
   });
 
-  // 5️⃣ Wire up your auth BLoC and run the app
   final datasource = SupabaseAuthDatasource();
   final repository = AuthRepositoryImpl(datasource);
   final signIn = SignIn(repository);
@@ -89,7 +84,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
           fontFamily: 'Main Font',
-          textTheme: TextTheme(
+          textTheme: const TextTheme(
             bodyMedium: TextStyle(
               fontWeight: FontWeight.w400,
             ),

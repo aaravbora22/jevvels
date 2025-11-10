@@ -44,7 +44,7 @@ class AttachmentSyncQueue extends AbstractAttachmentQueue {
         .watch(
             'SELECT bill_images_id FROM jewelry_items WHERE bill_images_id IS NOT NULL')
         .map((rows) => rows.map((r) => r['bill_images_id'] as String).toList())
-        .skip(1) // ← ignore the snapshot of existing rows
+        .skip(1) 
         .listen((ids) async {
       final queued = await attachmentsService.getAttachmentIds();
       final newIds = ids.where((id) => !queued.contains(id)).toList();

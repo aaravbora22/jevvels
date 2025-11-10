@@ -13,7 +13,6 @@ final schema = Schema([
     Column.text('path'),
   ]),
   const Table('item_images', [
-    // <-- plural to match your INSERTs
     Column.text('path'),
   ]),
   const Table('jewelry_items', [
@@ -38,6 +37,6 @@ final schema = Schema([
     Column.real('precious_metals_rate'),
   ]),
 
-  // This adds the local ‘attachments_queue’ table needed by the helper:
+  // adds the local ‘attachments_queue’ table needed by the helper
   AttachmentsQueueTable(),
 ]);

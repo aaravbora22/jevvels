@@ -14,11 +14,11 @@ class TradingViewCard extends StatelessWidget {
         padding: const EdgeInsets.all(10.0),
         decoration: const BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(20)),
-          color: Color(0xFFB99750), // Gold tone
+          color: Color(0xFFB99750), 
         ),
         child: const ClipRRect(
           borderRadius: BorderRadius.all(Radius.circular(15)),
-          child: TradingViewWebView(), // Your embedded chart widget
+          child: TradingViewWebView(), 
         ),
       ),
     );

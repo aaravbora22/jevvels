@@ -258,7 +258,6 @@ class _DashboardState extends State<Dashboard> {
                     },
                   ),
                 ),
-
                 // Statistics + Liquidate (responsive, aligned)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 0),

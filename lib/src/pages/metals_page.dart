@@ -15,7 +15,7 @@ class _MetalsPageState extends State<MetalsPage> {
   static const gold = Color(0xFFB99750);
   static const bgDark = Color(0xFF272424);
   static const cardDark = Color(0xFF2F2A2A);
-  static const faint = Color(0xFF9B8B6B); // softer gold for labels/dividers
+  static const faint = Color(0xFF9B8B6B); 
 
   double makingCost = 0.0;
   Map<String, List<double>> metalHistory = {};
@@ -379,17 +379,16 @@ class _MetalCard extends StatelessWidget {
                                 show: true,
                                 getDotPainter: (spot, percent, barData, index) {
                                   if (index == prices.length - 1) {
-                                    // highlight only the latest (today’s) point
                                     return FlDotCirclePainter(
                                       radius: 4,
-                                      color: Colors.black, // dot color
+                                      color: Colors.black, 
                                       strokeWidth: 2,
                                       strokeColor: _MetalsPageState
-                                          .gold, // outline in gold
+                                          .gold, 
                                     );
                                   }
                                   return FlDotCirclePainter(
-                                      radius: 0); // hide other dots
+                                      radius: 0); 
                                 },
                               ),
                             ),
@@ -495,17 +494,16 @@ class _MetalCard extends StatelessWidget {
                               show: true,
                               getDotPainter: (spot, percent, barData, index) {
                                 if (index == prices.length - 1) {
-                                  // highlight only the latest (today’s) point
                                   return FlDotCirclePainter(
                                     radius: 4,
-                                    color: Colors.black, // dot color
+                                    color: Colors.black, 
                                     strokeWidth: 2,
                                     strokeColor: _MetalsPageState
-                                        .gold, // outline in gold
+                                        .gold, 
                                   );
                                 }
                                 return FlDotCirclePainter(
-                                    radius: 0); // hide other dots
+                                    radius: 0); 
                               },
                             ),
                           ),
