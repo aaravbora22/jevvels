@@ -10,6 +10,9 @@ import 'package:jevvels/src/components/dashboard/nav_item.dart';
 import 'package:jevvels/src/pages/dashboard.dart';
 import 'package:jevvels/new_entry/new_entry.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 
 class Settings extends StatefulWidget {
   const Settings({
@@ -26,12 +29,15 @@ class _SettingsState extends State<Settings> {
   String profileImageUrl = '';
   final TextEditingController _usernameController = TextEditingController();
 
-  List<Map<String, String>> collaborators = [
-    {'email': 'editor@email.com', 'role': 'Editor'},
-    {'email': 'viewer@email.com', 'role': 'Viewer'},
-  ];
+  // NEW:
+  final LocalAuthentication _localAuth = LocalAuthentication();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  bool _biometricEnabled = false;
 
-  @override
+  // Collaborators feature temporarily disabled.
+  List<Map<String, String>> collaborators = [];
+
+    @override
   void initState() {
     super.initState();
     final user = Supabase.instance.client.auth.currentUser;
@@ -44,9 +50,77 @@ class _SettingsState extends State<Settings> {
       userName = '';
     }
     _usernameController.text = userName;
+
+    _loadBiometricPreference();
   }
 
-  void _saveUsername() async {
+  Future<void> _loadBiometricPreference() async {
+    final saved = await _secureStorage.read(key: 'biometric_enabled');
+    setState(() {
+      _biometricEnabled = saved == 'true';
+    });
+  }
+
+    Future<void> _toggleBiometric(bool value) async {
+    // If turning OFF: just disable and save.
+    if (!value) {
+      setState(() {
+        _biometricEnabled = false;
+      });
+      await _secureStorage.write(key: 'biometric_enabled', value: 'false');
+      return;
+    }
+
+    
+
+    // If turning ON: check device support first.
+    final canCheckBiometrics = await _localAuth.canCheckBiometrics;
+    final isDeviceSupported = await _localAuth.isDeviceSupported();
+
+    if (!canCheckBiometrics || !isDeviceSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Biometric authentication not available on this device.'),
+        ),
+      );
+      // Make sure switch goes back to OFF
+      setState(() {
+        _biometricEnabled = false;
+      });
+      return;
+    }
+
+    try {
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Enable Face ID to quickly unlock Jevvels.',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: false,
+          useErrorDialogs: true,
+        ),
+      );
+
+      if (didAuthenticate) {
+        setState(() {
+          _biometricEnabled = true;
+        });
+        await _secureStorage.write(key: 'biometric_enabled', value: 'true');
+      } else {
+        setState(() {
+          _biometricEnabled = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _biometricEnabled = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not enable biometrics: $e')),
+      );
+    }
+  }
+
+    void _saveUsername() async {
     final newUsername = _usernameController.text.trim();
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -94,97 +168,22 @@ class _SettingsState extends State<Settings> {
     }
   }
 
-  void _changeRole(int index, String newRole) {
-    setState(() {
-      collaborators[index]['role'] = newRole;
-    });
-  }
+  // void _changeRole(int index, String newRole) {
+  //   setState(() {
+  //     collaborators[index]['role'] = newRole;
+  //   });
+  // }
 
-  void _addCollaborator() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final TextEditingController _emailController = TextEditingController();
-        String selectedRole = 'Viewer';
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2C2B2B),
-          title: const Text('Add Collaborator',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'Main Font',
-                  fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _emailController,
-                style: const TextStyle(
-                    color: Colors.white, fontFamily: 'Main Font'),
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  labelStyle: TextStyle(color: Color(0xFFB99750)),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFFB99750)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFFB99750), width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Color(0xFF2C2B2B),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButton<String>(
-                value: selectedRole,
-                dropdownColor: const Color(0xFF2C2B2B),
-                style: const TextStyle(
-                    color: Colors.white, fontFamily: 'Main Font'),
-                items: const [
-                  DropdownMenuItem(value: 'Editor', child: Text('Editor')),
-                  DropdownMenuItem(value: 'Viewer', child: Text('Viewer')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    selectedRole = value;
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB99750)),
-              onPressed: () {
-                setState(() {
-                  collaborators.add({
-                    'email': _emailController.text,
-                    'role': selectedRole,
-                  });
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Add',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // void _addCollaborator() {
+  //   // Collaborator UI and logic temporarily disabled.
+  //   // Re-enable by restoring the original implementation.
+  // }
 
-  void _removeCollaborator(int index) {
-    setState(() {
-      collaborators.removeAt(index);
-    });
-  }
+  // void _removeCollaborator(int index) {
+  //   setState(() {
+  //     collaborators.removeAt(index);
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -353,22 +352,9 @@ class _SettingsState extends State<Settings> {
                                   fontFamily: 'Main Font',
                                   fontSize: 20)),
                           const SizedBox(width: 12),
-                          ...collaborators.map((c) => Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 2.0),
-                                child: CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: c['role'] == 'Editor'
-                                      ? const Color(0xFFB99750)
-                                      : Colors.grey,
-                                  child: Text(
-                                    c['email']![0].toUpperCase(),
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Main Font'),
-                                  ),
-                                ),
-                              )),
+                          // Collaborators display temporarily disabled.
+                          // To re-enable, replace the following comment with the original mapping:
+                          // ...collaborators.map((c) => Padding(...)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -382,7 +368,8 @@ class _SettingsState extends State<Settings> {
                   ),
                 ),
               ),
-              // Collaborators section
+              // Collaborators section temporarily disabled.
+              /*
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -414,126 +401,12 @@ class _SettingsState extends State<Settings> {
                 child: Column(
                   children: [
                     for (int i = 0; i < collaborators.length; i++)
-                      collaborators[i]['invited'] == 'true'
-                          ? Dismissible(
-                              key: Key(collaborators[i]['email']!),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 24),
-                                color: Colors.red,
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Icon(Icons.delete, color: Colors.white),
-                                    SizedBox(width: 8),
-                                    Text('Remove',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: 'Main Font',
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                              onDismissed: (_) => _removeCollaborator(i),
-                              child: ListTile(
-                                leading: const Icon(Icons.person,
-                                    color: Color(0xFFB99750)),
-                                title: Row(
-                                  children: [
-                                    Text(collaborators[i]['email']!,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: 'Main Font',
-                                            fontSize: 16)),
-                                    const SizedBox(width: 8),
-                                    const Text('•',
-                                        style: TextStyle(
-                                            color: Color(0xFFB99750),
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(width: 8),
-                                    Text('Invitation sent',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: 'Main Font',
-                                            fontSize: 14)),
-                                  ],
-                                ),
-                                subtitle: Text('${collaborators[i]['role']}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Main Font',
-                                        fontSize: 14)),
-                                trailing: const Icon(Icons.swipe_left,
-                                    color: Colors.white38),
-                              ),
-                            )
-                          : Dismissible(
-                              key: Key(collaborators[i]['email']!),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 24),
-                                color: Colors.red,
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Icon(Icons.delete, color: Colors.white),
-                                    SizedBox(width: 8),
-                                    Text('Remove',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontFamily: 'Main Font',
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                              onDismissed: (_) => _removeCollaborator(i),
-                              child: ListTile(
-                                leading: const Icon(Icons.person,
-                                    color: Color(0xFFB99750)),
-                                title: Text(collaborators[i]['email']!,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Main Font',
-                                        fontSize: 16)),
-                                subtitle: Text('${collaborators[i]['role']}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Main Font',
-                                        fontSize: 14)),
-                                trailing: PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert,
-                                      color: Color(0xFFB99750)),
-                                  onSelected: (value) => _changeRole(i, value),
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'Editor',
-                                      child: Text(
-                                        'Editor',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                        value: 'Viewer',
-                                        child: Text(
-                                          'Viewer',
-                                          style: TextStyle(
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold),
-                                        )),
-                                  ],
-                                ),
-                              ),
-                            ),
+                      // Original collaborator list items commented out.
                   ],
                 ),
               ),
               const SizedBox(height: 32),
+              */
               // Security section
               const Text('Security',
                   style: TextStyle(
@@ -542,28 +415,31 @@ class _SettingsState extends State<Settings> {
                       fontFamily: 'Main Font',
                       fontSize: 24)),
               Card(
-                color: const Color(0xFF2C2B2B),
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                child: ListTile(
-                  leading: const Icon(Icons.security, color: Color(0xFFB99750)),
-                  title: const Text('Biometric Authentication',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Main Font',
-                          fontWeight: FontWeight.bold)),
-                  subtitle: const Text(
-                      'Enable Biometric authentication, recommended for security',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Main Font',
-                          fontSize: 12)),
-                  trailing: Switch(
-                    value: false,
-                    onChanged: (val) {}, // To be implemented later
-                    activeColor: const Color(0xFFB99750),
-                  ),
-                ),
-              ),
+  color: const Color(0xFF2C2B2B),
+  margin: const EdgeInsets.symmetric(vertical: 12),
+  child: ListTile(
+    leading: const Icon(Icons.security, color: Color(0xFFB99750)),
+    title: const Text('Biometric Authentication',
+        style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Main Font',
+            fontWeight: FontWeight.bold)),
+    subtitle: const Text(
+        'Enable Biometric authentication, recommended for security',
+        style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Main Font',
+            fontSize: 12)),
+    trailing: Switch(
+      value: _biometricEnabled,
+      onChanged: (val) {
+        _toggleBiometric(val);   // <- THIS triggers Face ID sheet when enabling
+      },
+      activeColor: const Color(0xFFB99750),
+    ),
+  ),
+),
+
               const SizedBox(height: 32),
               // Logout button
               Center(

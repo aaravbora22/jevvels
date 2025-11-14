@@ -52,6 +52,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Jevvels will need access to your photo gallery to upload item and bill images.</string>
 
+	<key>NSFaceIDUsageDescription</key>
+	<string>Jevvels uses Face ID to let you quickly and securely unlock your account.</string>
+
 	<!-- Ditto Live Bluetooth, Local Network, and Bonjour Permissions -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Uses Bluetooth to connect and sync with nearby devices</string>

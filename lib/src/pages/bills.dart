@@ -1,4 +1,5 @@
-import 'dart:io';
+// lib/src/pages/bills.dart
+
 import 'package:flutter/material.dart';
 import 'package:jevvels/powersync/powersync_connector.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,7 +12,9 @@ class BillsPage extends StatefulWidget {
 }
 
 class _BillsPageState extends State<BillsPage> {
+  
   List<Map<String, dynamic>> _bills = [];
+  String? _offlineError;
 
   @override
   void initState() {
@@ -19,58 +22,121 @@ class _BillsPageState extends State<BillsPage> {
     _fetchBills();
   }
 
-    String? _offlineError;
+  /// 🔗 Build a Supabase Storage URL for a given storage path
+  /// bill_image_path should be something like: 'bills/<uuid>.jpg'
+  String? _getBillImageUrl(String? storagePath) {
+    if (storagePath == null || storagePath.isEmpty) return null;
+
+    final supabase = Supabase.instance.client;
+
+    // bucket name = 'images'
+    return supabase.storage.from('images').getPublicUrl(storagePath);
+  }
 
   Future<void> _fetchBills() async {
     try {
       final supabase = Supabase.instance.client;
+
       final response = await supabase
           .from('jewelry_items')
-          .select('id, notes, total_weight, bill_images_id, category_id, '
-              'categories(name), '
-              'bill_images(path), '
-              'pricing_details(total_price, making_cost, precious_metals_rate)')
+          .select(
+            'id, notes, total_weight, bill_images_id, category_id, '
+            'categories(name), '
+            'pricing_details(total_price, making_cost, precious_metals_rate)',
+          )
           .order('id', ascending: false);
 
       final bills = (response as List)
-          .map<Map<String, dynamic>>((item) => {
-                'id': item['id'],
-                'notes': item['notes'],
-                'total_weight': item['total_weight'],
-                'bill_images_id': item['bill_images_id'],
-                'category_id': item['category_id'],
-                'bill_image_path': item['bill_images']?['path'],
-                'category': item['categories']?['name'],
-                'total_price': item['pricing_details']?['total_price'],
-                'making_cost': item['pricing_details']?['making_cost'],
-                'precious_metals_rate':
-                    item['pricing_details']?['precious_metals_rate'],
-              })
-          .toList();
+          .map<Map<String, dynamic>>((item) {
+        final billImagesId = item['bill_images_id'] as String?;
+
+        // 🔹 Build storage path for Supabase Storage
+        final billImagePath =
+            billImagesId != null ? 'bills/$billImagesId.jpg' : null;
+
+        // 🔹 pricing_details comes back as a List
+        final pdList = item['pricing_details'] as List?;
+        Map<String, dynamic>? pd;
+        if (pdList != null && pdList.isNotEmpty) {
+          pd = pdList[0] as Map<String, dynamic>;
+        }
+
+        final mapped = {
+          'id': item['id'] as String,
+          'notes': item['notes'],
+          'total_weight': (item['total_weight'] as num?)?.toDouble(),
+          'bill_images_id': billImagesId,
+          'category_id': item['category_id'] as String?,
+          'bill_image_path': billImagePath,
+          'category': (item['categories'] as Map?)?['name'] as String?,
+          'total_price': pd?['total_price'] as num?,
+          'making_cost': pd?['making_cost'] as num?,
+          'precious_metals_rate': pd?['precious_metals_rate'] as num?,
+        };
+
+        print('🧾 [ONLINE] bill id: ${mapped['id']}');
+        print('🖼  [ONLINE] bill_image_path: ${mapped['bill_image_path']}');
+        final url = _getBillImageUrl(mapped['bill_image_path'] as String?);
+        print('🌐 [ONLINE] imageUrl: $url');
+
+        return mapped;
+      }).toList();
 
       setState(() {
         _bills = bills;
         _offlineError = null;
       });
-    } catch (e) {
+    } catch (e, st) {
+      print('❌ Online fetch error in _fetchBills: $e');
+      print(st);
+
+      // 🔁 Offline fallback from local PowerSync DB
       try {
         final result = await db.execute('''
           SELECT ji.id, ji.notes, ji.total_weight, ji.bill_images_id, ji.category_id,
-                 bi.path as bill_image_path, c.name as category,
+                 c.name as category,
                  pd.total_price, pd.making_cost, pd.precious_metals_rate
           FROM jewelry_items ji
-          LEFT JOIN bill_images bi ON ji.bill_images_id = bi.id
           LEFT JOIN categories c ON ji.category_id = c.id
           LEFT JOIN pricing_details pd ON pd.jewelry_item_id = ji.id
           ORDER BY ji.id DESC
         ''');
+
+        final bills = result.map<Map<String, dynamic>>((row) {
+          final billImagesId = row['bill_images_id'] as String?;
+          final billImagePath =
+              billImagesId != null ? 'bills/$billImagesId.jpg' : null;
+
+          final mapped = {
+            'id': row['id'] as String,
+            'notes': row['notes'],
+            'total_weight': (row['total_weight'] as num?)?.toDouble(),
+            'bill_images_id': billImagesId,
+            'category_id': row['category_id'] as String?,
+            'bill_image_path': billImagePath,
+            'category': row['category'] as String?,
+            'total_price': row['total_price'] as num?,
+            'making_cost': row['making_cost'] as num?,
+            'precious_metals_rate': row['precious_metals_rate'] as num?,
+          };
+
+          print('🧾 [OFFLINE] bill id: ${mapped['id']}');
+          print('🖼  [OFFLINE] bill_image_path: ${mapped['bill_image_path']}');
+          final url = _getBillImageUrl(mapped['bill_image_path'] as String?);
+          print('🌐 [OFFLINE] imageUrl: $url');
+
+          return mapped;
+        }).toList();
+
         setState(() {
-          _bills = result;
-          _offlineError = result.isEmpty
+          _bills = bills;
+          _offlineError = bills.isEmpty
               ? "Sorry, you can't view your information without a network connection."
               : null;
         });
-      } catch (e2) {
+      } catch (e2, st2) {
+        print('❌ Offline fetch error in _fetchBills: $e2');
+        print(st2);
         setState(() {
           _bills = [];
           _offlineError =
@@ -114,6 +180,16 @@ class _BillsPageState extends State<BillsPage> {
               itemCount: _bills.length,
               itemBuilder: (context, idx) {
                 final bill = _bills[idx];
+
+                // Safely cast numeric fields for chips
+                final weight = bill['total_weight'] as num?;
+                final totalPrice = bill['total_price'] as num?;
+                final makingCost = bill['making_cost'] as num?;
+                final preciousRate = bill['precious_metals_rate'] as num?;
+
+                final imageUrl =
+                    _getBillImageUrl(bill['bill_image_path'] as String?);
+
                 return Card(
                   color: const Color(0xFF2C2B2B),
                   elevation: 6,
@@ -131,22 +207,38 @@ class _BillsPageState extends State<BillsPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Bill Image
+                            // 🧾 Bill Image from Supabase
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: bill['bill_image_path'] != null
-                                  ? Image.file(
-                                      File(bill['bill_image_path']),
+                              child: imageUrl != null
+                                  ? Image.network(
+                                      imageUrl,
                                       width: 90,
                                       height: 90,
                                       fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          width: 90,
+                                          height: 90,
+                                          color: Colors.black26,
+                                          child: const Icon(
+                                            Icons.broken_image,
+                                            color: Colors.white38,
+                                            size: 40,
+                                          ),
+                                        );
+                                      },
                                     )
                                   : Container(
                                       width: 90,
                                       height: 90,
                                       color: Colors.black26,
-                                      child: const Icon(Icons.receipt_long,
-                                          color: Colors.white38, size: 40),
+                                      child: const Icon(
+                                        Icons.receipt_long,
+                                        color: Colors.white38,
+                                        size: 40,
+                                      ),
                                     ),
                             ),
                             const SizedBox(width: 18),
@@ -206,7 +298,7 @@ class _BillsPageState extends State<BillsPage> {
                                           _InfoChip(
                                             icon: Icons.scale,
                                             label:
-                                                'Wt: ${bill['total_weight']?.toStringAsFixed(2) ?? '--'}g',
+                                                'Wt: ${weight != null ? weight.toStringAsFixed(2) : '--'}g',
                                           ),
                                         ],
                                       ),
@@ -224,23 +316,23 @@ class _BillsPageState extends State<BillsPage> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                if (bill['total_price'] != null)
+                                if (totalPrice != null)
                                   _InfoChip(
                                     icon: Icons.attach_money,
                                     label:
-                                        '₹${bill['total_price'].toStringAsFixed(2)}',
+                                        '₹${totalPrice.toStringAsFixed(2)}',
                                   ),
-                                if (bill['making_cost'] != null)
+                                if (makingCost != null)
                                   _InfoChip(
                                     icon: Icons.build,
                                     label:
-                                        'Making: ₹${bill['making_cost'].toStringAsFixed(2)}',
+                                        'Making: ₹${makingCost.toStringAsFixed(2)}',
                                   ),
-                                if (bill['precious_metals_rate'] != null)
+                                if (preciousRate != null)
                                   _InfoChip(
                                     icon: Icons.star,
                                     label:
-                                        'Rate: ₹${bill['precious_metals_rate'].toStringAsFixed(2)}',
+                                        'Rate: ₹${preciousRate.toStringAsFixed(2)}',
                                   ),
                               ],
                             ),
@@ -290,7 +382,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Color(0xFFB99750),
+              color: const Color(0xFFB99750),
               fontFamily: 'Main Font',
               fontWeight: fontWeight,
               fontSize: fontSize,

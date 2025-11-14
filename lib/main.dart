@@ -1,44 +1,57 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:jevvels/src/pages/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:jevvels/authentication/data/datasources/supabase_auth_datasource.dart';
 import 'package:jevvels/authentication/data/repositories/auth_respository_impl.dart';
 import 'package:jevvels/authentication/domain/usecases/sign_in.dart';
 import 'package:jevvels/authentication/domain/usecases/sign_up.dart';
 import 'package:jevvels/authentication/domain/usecases/sign_out.dart';
 import 'package:jevvels/authentication/presentation/bloc/auth_bloc.dart';
-import 'package:jevvels/authentication/presentation/pages/auth_gate.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:jevvels/new_entry/supabase_powersync_images.dart';
-import 'package:jevvels/new_entry/supabase_storage_adapter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'powersync/powersync_connector.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. Load env
   await dotenv.load(fileName: '.env');
+
+  // 2. Init Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
+  // 3. Open PowerSync DB
   await openPowerSyncDatabase();
 
-  final remoteStorage = SupabaseStorageAdapter('images');
-  final attachmentQueue = AttachmentSyncQueue(db, remoteStorage);
-  await attachmentQueue.init();
-  attachmentQueue.watchIds(fileExtension: 'jpg');
+  // // 🔥 One-time: wipe old attachment queue rows
+  // await db.execute('DELETE FROM attachments_queue');
+  // print('✅ attachments_queue cleared');
 
-  Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+  // 4. Auth / connector wiring
+  final auth = Supabase.instance.client.auth;
+
+  if (auth.currentUser != null) {
+    db.connect(connector: MyBackendConnector(db));
+  }
+
+  auth.onAuthStateChange.listen((data) async {
     final event = data.event;
+
     if (event == AuthChangeEvent.signedIn) {
       db.connect(connector: MyBackendConnector(db));
     } else if (event == AuthChangeEvent.signedOut) {
       await db.disconnectAndClear();
     }
-    // tokenRefreshed is handled in MyBackendConnector
   });
 
+  // 5. Auth DI
   final datasource = SupabaseAuthDatasource();
   final repository = AuthRepositoryImpl(datasource);
   final signIn = SignIn(repository);
@@ -52,6 +65,29 @@ Future<void> main() async {
       signOut: signOut,
     ),
   );
+}
+
+
+/// 🔧 One-time cleanup of stale attachment rows that used old filenames
+Future<void> cleanupOldAttachments() async {
+  // Optional: inspect what's there before deleting
+  final rows = await db.execute(
+    'SELECT id, filename, state FROM attachments_queue',
+  );
+  for (final row in rows) {
+    print(
+      '🧹 attachments_queue row -> '
+      'id=${row['id']}, filename=${row['filename']}, state=${row['state']}',
+    );
+  }
+
+  // ✅ Delete only "old-style" filenames (no bills/ or items/ prefix)
+  await db.execute(
+    "DELETE FROM attachments_queue "
+    "WHERE filename NOT LIKE 'bills/%' AND filename NOT LIKE 'items/%'",
+  );
+
+  print('✅ Cleanup complete: removed old attachment queue entries');
 }
 
 class MyApp extends StatelessWidget {
@@ -79,7 +115,8 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false,
+        title: 'Jevvels',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
@@ -90,7 +127,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const AuthGate(),
+        home: const JevvelsSplashScreen(),
       ),
     );
   }

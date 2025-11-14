@@ -1,7 +1,7 @@
-import 'dart:io';
+// lib/src/pages/items.dart
 import 'package:flutter/material.dart';
-import 'package:jevvels/new_entry/supabase_storage_adapter.dart';
 import 'package:jevvels/powersync/powersync_connector.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ItemsPage extends StatefulWidget {
   const ItemsPage({Key? key}) : super(key: key);
@@ -11,95 +11,148 @@ class ItemsPage extends StatefulWidget {
 }
 
 class _ItemsPageState extends State<ItemsPage> {
+  List<Map<String, dynamic>> _items = [];
+  Map<String, List<Map<String, dynamic>>> _metalsByItem = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchItems();
+  }
+
+  /// 🔗 Build a Supabase Storage URL for an item image
+  /// item_image_path should be something like: 'items/<uuid>.jpg'
+  String? _getItemImageUrl(String? storagePath) {
+    if (storagePath == null || storagePath.isEmpty) return null;
+
+    final supabase = Supabase.instance.client;
+
+    // bucket name = 'images'
+    return supabase.storage.from('images').getPublicUrl(storagePath);
+  }
+
+  Future<void> _fetchItems() async {
+    // Everything from local PowerSync DB (online or offline)
+    final items = await db.execute('''
+      SELECT ji.id, ji.total_weight, ji.item_images_id, ji.category_id, ji.shop_id,
+             ii.path as item_image_path,
+             c.name as category,
+             s.name as shop
+      FROM jewelry_items ji
+      LEFT JOIN item_images ii ON ji.item_images_id = ii.id
+      LEFT JOIN categories c ON ji.category_id = c.id
+      LEFT JOIN shops s ON ji.shop_id = s.id
+      ORDER BY ji.id DESC
+    ''');
+
+    // Get all metals for all items
+    final metals = await db.execute('''
+      SELECT m.id, m.jewelry_item_id, m.type, m.weight, m.karat
+      FROM metals m
+    ''');
+
+    // Group metals by jewelry_item_id
+    final Map<String, List<Map<String, dynamic>>> metalsByItem = {};
+    for (final metal in metals) {
+      final itemId = metal['jewelry_item_id'].toString();
+      metalsByItem.putIfAbsent(itemId, () => []).add(metal);
+    }
+
+    setState(() {
+      _items = items;
+      _metalsByItem = metalsByItem;
+    });
+
+    // Optional debug
+    for (final it in items) {
+      print('💍 item id: ${it['id']}');
+      print('🖼  item_image_path (DB): ${it['item_image_path']}');
+      final url = _getItemImageUrl(it['item_image_path'] as String?);
+      print('🌐 imageUrl: $url');
+    }
+  }
+
   Future<void> _deleteItem(Map<String, dynamic> item) async {
     final itemId = item['id'];
+
+    // Get image ids from jewelry_items
     final jewelry = await db.execute(
-        'SELECT bill_images_id, item_images_id FROM jewelry_items WHERE id = ?',
-        [itemId]);
+      'SELECT bill_images_id, item_images_id FROM jewelry_items WHERE id = ?',
+      [itemId],
+    );
+
     String? billImageId =
         jewelry.isNotEmpty ? jewelry.first['bill_images_id']?.toString() : null;
     String? itemImageId =
         jewelry.isNotEmpty ? jewelry.first['item_images_id']?.toString() : null;
+
+    // Get stored *paths* from bill_images / item_images
     String? billImagePath;
     String? itemImagePath;
+
     if (billImageId != null) {
-      final billImg = await db
-          .execute('SELECT path FROM bill_images WHERE id = ?', [billImageId]);
-      billImagePath = billImg.isNotEmpty ? billImg.first['path'] : null;
-    }
-    if (itemImageId != null) {
-      final itemImg = await db
-          .execute('SELECT path FROM item_images WHERE id = ?', [itemImageId]);
-      itemImagePath = itemImg.isNotEmpty ? itemImg.first['path'] : null;
+      final billImg = await db.execute(
+        'SELECT path FROM bill_images WHERE id = ?',
+        [billImageId],
+      );
+      billImagePath = billImg.isNotEmpty ? billImg.first['path'] as String? : null;
     }
 
-    // delete from Supabase storage 
-    final supabase = SupabaseStorageAdapter('images');
-    if (billImageId != null) {
-      try {
-        await supabase.deleteFile('$billImageId.jpg');
-      } catch (e) {
-        // ignore error, log if needed
-      }
-    }
     if (itemImageId != null) {
-      try {
-        await supabase.deleteFile('$itemImageId.jpg');
-      } catch (e) {
-        // ignore error, log if needed
-      }
+      final itemImg = await db.execute(
+        'SELECT path FROM item_images WHERE id = ?',
+        [itemImageId],
+      );
+      itemImagePath = itemImg.isNotEmpty ? itemImg.first['path'] as String? : null;
     }
+
+    // 🔥 Delete from Supabase Storage (images bucket)
+    final storage = Supabase.instance.client.storage.from('images');
 
     if (billImagePath != null && billImagePath.isNotEmpty) {
       try {
-        final file = File(billImagePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        await storage.remove([billImagePath]); // e.g. 'bills/<id>.jpg'
       } catch (e) {
-        // ignore error, log if needed
+        // log if you want
+        print('⚠️ Error deleting bill image from storage: $e');
       }
     }
+
     if (itemImagePath != null && itemImagePath.isNotEmpty) {
       try {
-        final file = File(itemImagePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        await storage.remove([itemImagePath]); // e.g. 'items/<id>.jpg'
       } catch (e) {
-        // ignore error, log if needed
+        print('⚠️ Error deleting item image from storage: $e');
       }
     }
 
     // Delete metals
     await db.execute('DELETE FROM metals WHERE jewelry_item_id = ?', [itemId]);
+
     // Delete pricing_details
     await db.execute(
-        'DELETE FROM pricing_details WHERE jewelry_item_id = ?', [itemId]);
-    // Delete shop if unused
-    final shopId = item['shop_id'];
-    if (shopId != null) {
-      final shopCount = await db.execute(
-          'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
-          [shopId]);
-      if (shopCount.isNotEmpty &&
-          (shopCount.first['cnt'] == 0 || shopCount.first['cnt'] == 0.0)) {
-        await db.execute('DELETE FROM shops WHERE id = ?', [shopId]);
-      }
-    }
+      'DELETE FROM pricing_details WHERE jewelry_item_id = ?',
+      [itemId],
+    );
+
     // Delete from attachments_queue (if used)
     if (billImageId != null) {
-      await db
-          .execute('DELETE FROM attachments_queue WHERE id = ?', [billImageId]);
+      await db.execute(
+        'DELETE FROM attachments_queue WHERE id = ?',
+        [billImageId],
+      );
     }
     if (itemImageId != null) {
-      await db
-          .execute('DELETE FROM attachments_queue WHERE id = ?', [itemImageId]);
+      await db.execute(
+        'DELETE FROM attachments_queue WHERE id = ?',
+        [itemImageId],
+      );
     }
-    // Delete jewelry_items 
+
+    // Delete jewelry_items
     await db.execute('DELETE FROM jewelry_items WHERE id = ?', [itemId]);
 
-    // Delete bill_images and item_images 
+    // Delete bill_images and item_images
     if (billImageId != null) {
       await db.execute('DELETE FROM bill_images WHERE id = ?', [billImageId]);
     }
@@ -107,11 +160,13 @@ class _ItemsPageState extends State<ItemsPage> {
       await db.execute('DELETE FROM item_images WHERE id = ?', [itemImageId]);
     }
 
-    // Delete shop if unused 
+    // Delete shop if unused
+    final shopId = item['shop_id'];
     if (shopId != null) {
       final shopCount = await db.execute(
-          'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
-          [shopId]);
+        'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
+        [shopId],
+      );
       if (shopCount.isNotEmpty &&
           (shopCount.first['cnt'] == 0 || shopCount.first['cnt'] == 0.0)) {
         await db.execute('DELETE FROM shops WHERE id = ?', [shopId]);
@@ -122,50 +177,16 @@ class _ItemsPageState extends State<ItemsPage> {
     final catId = item['category_id'];
     if (catId != null) {
       final catCount = await db.execute(
-          'SELECT COUNT(*) as cnt FROM jewelry_items WHERE category_id = ?',
-          [catId]);
+        'SELECT COUNT(*) as cnt FROM jewelry_items WHERE category_id = ?',
+        [catId],
+      );
       if (catCount.isNotEmpty &&
           (catCount.first['cnt'] == 0 || catCount.first['cnt'] == 0.0)) {
         await db.execute('DELETE FROM categories WHERE id = ?', [catId]);
       }
     }
+
     await _fetchItems();
-  }
-
-  List<Map<String, dynamic>> _items = [];
-  Map<String, List<Map<String, dynamic>>> _metalsByItem = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchItems();
-  }
-
-  Future<void> _fetchItems() async {
-    final items = await db.execute('''
-      SELECT ji.id, ji.total_weight, ji.item_images_id, ji.category_id, ji.shop_id,
-             ii.path as item_image_path, c.name as category, s.name as shop
-      FROM jewelry_items ji
-      LEFT JOIN item_images ii ON ji.item_images_id = ii.id
-      LEFT JOIN categories c ON ji.category_id = c.id
-      LEFT JOIN shops s ON ji.shop_id = s.id
-      ORDER BY ji.id DESC
-    ''');
-    // Get all metals for all items
-    final metals = await db.execute('''
-      SELECT m.id, m.jewelry_item_id, m.type, m.weight, m.karat
-      FROM metals m
-    ''');
-    // Group metals by jewelry_item_id
-    final Map<String, List<Map<String, dynamic>>> metalsByItem = {};
-    for (final metal in metals) {
-      final itemId = metal['jewelry_item_id'].toString();
-      metalsByItem.putIfAbsent(itemId, () => []).add(metal);
-    }
-    setState(() {
-      _items = items;
-      _metalsByItem = metalsByItem;
-    });
   }
 
   @override
@@ -173,8 +194,7 @@ class _ItemsPageState extends State<ItemsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF272424),
       appBar: AppBar(
-                iconTheme: const IconThemeData(color: Color(0xFFB99750)),
-
+        iconTheme: const IconThemeData(color: Color(0xFFB99750)),
         title: const Text(
           'Items',
           style: TextStyle(
@@ -203,11 +223,13 @@ class _ItemsPageState extends State<ItemsPage> {
               itemCount: _items.length,
               itemBuilder: (context, idx) {
                 final item = _items[idx];
+
                 final metals = _metalsByItem[item['id']] ?? [];
                 final totalWeight =
                     (item['total_weight'] as num?)?.toDouble() ?? 0.0;
+
                 // calculate percentages for each metal
-                List<_MetalInfo> metalInfos = metals.map((m) {
+                final List<_MetalInfo> metalInfos = metals.map((m) {
                   final weight = (m['weight'] as num?)?.toDouble() ?? 0.0;
                   final percent =
                       (totalWeight > 0) ? (weight / totalWeight * 100) : 0.0;
@@ -218,6 +240,10 @@ class _ItemsPageState extends State<ItemsPage> {
                     percent: percent,
                   );
                 }).toList();
+
+                final imageUrl =
+                    _getItemImageUrl(item['item_image_path'] as String?);
+
                 return GestureDetector(
                   onLongPress: () async {
                     final confirm = await showDialog<bool>(
@@ -225,31 +251,44 @@ class _ItemsPageState extends State<ItemsPage> {
                       builder: (context) => AlertDialog(
                         backgroundColor: const Color(0xFF272424),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        title: const Text('Delete Item',
-                            style: TextStyle(
-                                color: Color(0xFFB99750),
-                                fontFamily: 'Main Font',
-                                fontWeight: FontWeight.bold)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: const Text(
+                          'Delete Item',
+                          style: TextStyle(
+                            color: Color(0xFFB99750),
+                            fontFamily: 'Main Font',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         content: const Text(
-                            'Are you sure you want to delete this item and all its details? This cannot be undone.',
-                            style: TextStyle(
-                                color: Colors.white, fontFamily: 'Main Font')),
+                          'Are you sure you want to delete this item and all its details? This cannot be undone.',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Main Font',
+                          ),
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel',
-                                style: TextStyle(
-                                    color: Colors.white70,
-                                    fontFamily: 'Main Font')),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontFamily: 'Main Font',
+                              ),
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete',
-                                style: TextStyle(
-                                    color: Color(0xFFB99750),
-                                    fontFamily: 'Main Font',
-                                    fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(
+                                color: Color(0xFFB99750),
+                                fontFamily: 'Main Font',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -264,8 +303,10 @@ class _ItemsPageState extends State<ItemsPage> {
                     shadowColor: Colors.black.withOpacity(0.18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side:
-                          const BorderSide(color: Color(0xFFB99750), width: 1),
+                      side: const BorderSide(
+                        color: Color(0xFFB99750),
+                        width: 1,
+                      ),
                     ),
                     margin: const EdgeInsets.only(bottom: 20),
                     child: Padding(
@@ -273,21 +314,38 @@ class _ItemsPageState extends State<ItemsPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // 🧺 Item image from Supabase
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: item['item_image_path'] != null
-                                ? Image.file(
-                                    File(item['item_image_path']),
+                            child: imageUrl != null
+                                ? Image.network(
+                                    imageUrl,
                                     width: 90,
                                     height: 90,
                                     fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                      return Container(
+                                        width: 90,
+                                        height: 90,
+                                        color: Colors.black26,
+                                        child: const Icon(
+                                          Icons.broken_image,
+                                          color: Colors.white38,
+                                          size: 40,
+                                        ),
+                                      );
+                                    },
                                   )
                                 : Container(
                                     width: 90,
                                     height: 90,
                                     color: Colors.black26,
-                                    child: const Icon(Icons.image,
-                                        color: Colors.white38, size: 40),
+                                    child: const Icon(
+                                      Icons.image,
+                                      color: Colors.white38,
+                                      size: 40,
+                                    ),
                                   ),
                           ),
                           const SizedBox(width: 18),
@@ -373,11 +431,12 @@ class _MetalInfo {
   final double weight;
   final String karat;
   final double percent;
-  _MetalInfo(
-      {required this.type,
-      required this.weight,
-      required this.karat,
-      required this.percent});
+  _MetalInfo({
+    required this.type,
+    required this.weight,
+    required this.karat,
+    required this.percent,
+  });
 }
 
 class _MetalChip extends StatelessWidget {
@@ -398,7 +457,7 @@ class _MetalChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${metal.type.toUpperCase()}',
+            metal.type.toUpperCase(),
             style: const TextStyle(
               color: Color(0xFFB99750),
               fontFamily: 'Main Font',

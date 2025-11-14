@@ -4,53 +4,64 @@ import 'package:powersync/powersync.dart';
 import 'package:powersync_attachments_helper/powersync_attachments_helper.dart';
 
 class AttachmentSyncQueue extends AbstractAttachmentQueue {
+  final String remotePrefix; // 'bills' or 'items'
+  final String idColumn;     // 'bill_images_id' or 'item_images_id'
+
   AttachmentSyncQueue(
-      PowerSyncDatabase db, AbstractRemoteStorageAdapter remoteStorage)
-      : super(db: db, remoteStorage: remoteStorage);
+    PowerSyncDatabase db,
+    AbstractRemoteStorageAdapter remoteStorage, {
+    required this.remotePrefix,
+    required this.idColumn,
+  }) : super(db: db, remoteStorage: remoteStorage);
 
   @override
-  Future<Attachment> saveFile(String fileId, int size,
-      {String mediaType = 'image/jpeg'}) {
-    final filename = '$fileId.jpg';
+  Future<Attachment> saveFile(
+    String fileId,
+    int size, {
+    String mediaType = 'image/jpeg',
+  }) {
+    final baseFilename = '$fileId.jpg';
+    final remotePath =
+        remotePrefix.isEmpty ? baseFilename : '$remotePrefix/$baseFilename';
+
+    final localUri = remotePath; // how we store it under attachments/
+
     final attachment = Attachment(
       id: fileId,
-      filename: filename,
-      state: AttachmentState.queuedUpload.index,
+      filename: remotePath,                         // key in Supabase bucket
+      state: AttachmentState.queuedUpload.index,    // 🔼 upload
       mediaType: mediaType,
-      localUri: getLocalFilePathSuffix(filename),
+      localUri: localUri,                           // relative local path
       size: size,
     );
+
     return attachmentsService.saveAttachment(attachment);
   }
 
   @override
   Future<Attachment> deleteFile(String fileId) {
-    final filename = '$fileId.jpg';
+    final baseFilename = '$fileId.jpg';
+    final remotePath =
+        remotePrefix.isEmpty ? baseFilename : '$remotePrefix/$baseFilename';
+    final localUri = remotePath;
+
     final attachment = Attachment(
       id: fileId,
-      filename: filename,
-      state: AttachmentState.queuedDelete.index,
-      // ensure localUri is set so the helper can find & delete the file
-      localUri: getLocalFilePathSuffix(filename),
+      filename: remotePath,
+      state: AttachmentState.queuedDelete.index,    // ❌ delete
+      localUri: localUri,
     );
+
     return attachmentsService.saveAttachment(attachment);
   }
 
-  // supabase_powersync_images.dart
-
   @override
   StreamSubscription<void> watchIds({String fileExtension = 'jpg'}) {
-    return db
-        .watch(
-            'SELECT bill_images_id FROM jewelry_items WHERE bill_images_id IS NOT NULL')
-        .map((rows) => rows.map((r) => r['bill_images_id'] as String).toList())
-        .skip(1) 
-        .listen((ids) async {
-      final queued = await attachmentsService.getAttachmentIds();
-      final newIds = ids.where((id) => !queued.contains(id)).toList();
-      if (newIds.isNotEmpty) {
-        syncingService.processIds(newIds, fileExtension);
-      }
-    });
+    // 👉 Upload-only mode: we do NOT auto-create queuedDownload rows.
+    //
+    // init() still expects a subscription, so we return a dummy one.
+    final controller = StreamController<void>();
+    return controller.stream.listen((_) {});
   }
 }
+

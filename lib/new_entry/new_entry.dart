@@ -16,14 +16,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jevvels/widgets/build_text_field.dart';
 
 class JewelryFormPage extends StatefulWidget {
-  const JewelryFormPage({Key? key}) : super(key: key);
+  const JewelryFormPage({super.key});
 
   @override
   State<JewelryFormPage> createState() => _JewelryFormPageState();
 }
 
 class _JewelryFormPageState extends State<JewelryFormPage> {
-  late final AttachmentSyncQueue _attachmentQueue;
+  late final AttachmentSyncQueue _billAttachmentQueue;
+  late final AttachmentSyncQueue _itemAttachmentQueue;
   final _uuid = Uuid();
 
   final _formKey = GlobalKey<FormState>();
@@ -41,31 +42,84 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
   String? _notes;
   Map<String, dynamic>? _pricing;
 
-  @override
-  void initState() {
-    super.initState();
-    final remoteStorage = SupabaseStorageAdapter('images');
-    _attachmentQueue = AttachmentSyncQueue(db, remoteStorage);
-    _attachmentQueue.init();
-  }
+@override
+void initState() {
+  super.initState();
 
-  @override
-  void dispose() {
-    totalWeightController.dispose();
-    super.dispose();
-  }
+//   () async {
+//   // See what's in the queue (optional)
+//   final rows = await db.execute(
+//     'SELECT id, filename, local_uri, state FROM attachments_queue',
+//   );
+//   for (final row in rows) {
+//     print('📎 attachments_queue BEFORE cleanup: $row');
+//   }
 
-  Future<void> _copyAndQueue(File picked, String id) async {
-    final filename = '$id.jpg';
-    final dir = await _attachmentQueue.getStorageDirectory();
-    final targetPath = '$dir/$filename';
+//   // 🔥 Remove only "download" entries (state = 1)
+//   await db.execute(
+//     'DELETE FROM attachments_queue WHERE state = 1',
+//   );
 
-    await Directory(dir).create(recursive: true);
+//   print('🧹 attachments_queue cleanup complete');
+// }();
+
+  final remoteStorage = SupabaseStorageAdapter('images');
+
+  _billAttachmentQueue = AttachmentSyncQueue(
+    db,
+    remoteStorage,
+    remotePrefix: 'bills',
+    idColumn: 'bill_images_id',
+  );
+
+  _itemAttachmentQueue = AttachmentSyncQueue(
+    db,
+    remoteStorage,
+    remotePrefix: 'items',
+    idColumn: 'item_images_id',
+  );
+
+  _billAttachmentQueue.init();
+  _itemAttachmentQueue.init();
+}
+
+
+  Future<void> _copyAndQueue(
+    File picked,
+    String id,
+    AttachmentSyncQueue queue,
+  ) async {
+    final baseFilename = '$id.jpg';
+
+    // This usually returns something like:
+    // /.../Documents/attachments
+    final storageDir = await queue.getStorageDirectory();
+
+    final prefix = queue.remotePrefix; // 'bills' or 'items'
+    final remotePath = prefix.isEmpty
+        ? baseFilename
+        : '$prefix/$baseFilename'; // 'bills/id.jpg'
+
+    final targetPath = '$storageDir/$remotePath';
+
+    // Ensure 'bills' or 'items' folder exists under storageDir
+    final dir = Directory(
+      targetPath.substring(0, targetPath.lastIndexOf('/')),
+    );
+    await dir.create(recursive: true);
+
+    // print('📁 storageDir = $storageDir');
+    // print('📄 targetPath = $targetPath');
+
+    // Copy image to /Documents/attachments/bills/<id>.jpg or /Documents/attachments/items/<id>.jpg
     await File(picked.path).copy(targetPath);
 
     final size = await File(targetPath).length();
-    await _attachmentQueue.saveFile(id, size);
-    _attachmentQueue.syncingService.startPeriodicSync;
+
+    // This will create an Attachment with:
+    // filename = 'bills/<id>.jpg' or 'items/<id>.jpg'
+    // localUri = same as filename
+    await queue.saveFile(id, size);
   }
 
   Future<bool> _confirmUploadDialog() async {
@@ -191,25 +245,24 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                 if (bill != null && bill.path != _billImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
-                    // check existing row
-                    final existing = await db.execute(
-                      'SELECT id FROM bill_images WHERE path = ?',
-                      [bill.path],
+                    final billId = _uuid.v4();
+
+                    // 🔹 This is the *remote* path in Supabase
+                    final remotePath = 'bills/$billId.jpg';
+
+                    // 🔹 Store remote path in bill_images.path
+                    await db.execute(
+                      'INSERT INTO bill_images (id, path) VALUES (?, ?)',
+                      [billId, remotePath],
                     );
-                    final billId = existing.isNotEmpty
-                        ? existing.first['id'] as String
-                        : _uuid.v4();
-                    if (existing.isEmpty) {
-                      await db.execute(
-                        'INSERT INTO bill_images (id, path) VALUES (?, ?)',
-                        [billId, bill.path],
-                      );
-                    }
+
                     setState(() {
                       _billImage = bill;
                       _billImageId = billId;
                     });
-                    await _copyAndQueue(bill, billId);
+
+                    // 🔹 Copy file to local attachments/bills/<id>.jpg + queue upload
+                    await _copyAndQueue(bill, billId, _billAttachmentQueue);
                   } else {
                     setState(() {
                       _billImage = null;
@@ -217,29 +270,26 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                     });
                   }
                 }
-
                 // Item image logic (only if it's a new file)
                 if (item != null && item.path != _itemImage?.path) {
                   final ok = await _confirmUploadDialog();
                   if (ok) {
-                    final existing = await db.execute(
-                      'SELECT id FROM item_images WHERE path = ?',
-                      [item.path],
+                    final itemId = _uuid.v4();
+
+                    // REMOTE path for Supabase
+                    final remotePath = 'items/$itemId.jpg';
+
+                    await db.execute(
+                      'INSERT INTO item_images (id, path) VALUES (?, ?)',
+                      [itemId, remotePath],
                     );
-                    final itemId = existing.isNotEmpty
-                        ? existing.first['id'] as String
-                        : _uuid.v4();
-                    if (existing.isEmpty) {
-                      await db.execute(
-                        'INSERT INTO item_images (id, path) VALUES (?, ?)',
-                        [itemId, item.path],
-                      );
-                    }
+
                     setState(() {
                       _itemImage = item;
                       _itemImageId = itemId;
                     });
-                    await _copyAndQueue(item, itemId);
+
+                    await _copyAndQueue(item, itemId, _itemAttachmentQueue);
                   } else {
                     setState(() {
                       _itemImage = null;

@@ -258,25 +258,25 @@ class _DashboardState extends State<Dashboard> {
                     },
                   ),
                 ),
+                SizedBox(height: 10,),
                 // Statistics + Liquidate (responsive, aligned)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 0),
-                  child: Column(
-                    children: const [
-                      MyListTile(
-                        icon: Icon(Icons.bar_chart_rounded),
-                        tileTitle: "Statistics",
-                        tileSubtitle: "View your portfolio statistics",
-                      ),
-                      SizedBox(height: 8), // small gap between the two tiles
-                      MyListTile(
-                        icon: Icon(Icons.pie_chart_rounded),
-                        tileTitle: "Liquidate",
-                        tileSubtitle: "View the liquidation breakdown",
-                      ),
-                    ],
-                  ),
-                ),
+                // const Padding(
+                //   padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 0),
+                //   child: Column(
+                //     children: const [
+                //       MyListTile(
+                //         icon: Icon(Icons.bar_chart_rounded),
+                //         tileTitle: "Statistics",
+                //         tileSubtitle: "View your portfolio statistics",
+                //       ),
+                //       MyListTile(
+                //         icon: Icon(Icons.pie_chart_rounded),
+                //         tileTitle: "Liquidate",
+                //         tileSubtitle: "View the liquidation breakdown",
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),
