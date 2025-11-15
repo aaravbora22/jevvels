@@ -33,7 +33,7 @@ class _SettingsState extends State<Settings> {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _biometricEnabled = false;
 
-  bool _deleting = false; // 👈 NEW
+  bool _deleting = false; 
 
   // Collaborators feature temporarily disabled.
   List<Map<String, String>> collaborators = [];
@@ -58,7 +58,7 @@ class _SettingsState extends State<Settings> {
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.bold,
                     fontFamily: 'Main Font',
                   ),
                 ),
@@ -66,9 +66,10 @@ class _SettingsState extends State<Settings> {
                 const Text(
                   'This will permanently delete your Jevvels account and all portfolio entries linked to it. This action cannot be undone.',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Colors.white,
                     fontSize: 14,
                     fontFamily: 'Main Font',
+                    fontWeight: FontWeight.bold
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -87,7 +88,8 @@ class _SettingsState extends State<Settings> {
                     'Delete permanently',
                     style: TextStyle(
                       fontFamily: 'Main Font',
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white
                     ),
                   ),
                 ),
@@ -99,6 +101,7 @@ class _SettingsState extends State<Settings> {
                     style: TextStyle(
                       color: Color(0xFFB99750),
                       fontFamily: 'Main Font',
+                      fontWeight: FontWeight.bold
                     ),
                   ),
                 ),
@@ -469,9 +472,7 @@ class _SettingsState extends State<Settings> {
                                   fontFamily: 'Main Font',
                                   fontSize: 20)),
                           const SizedBox(width: 12),
-                          // Collaborators display temporarily disabled.
-                          // To re-enable, replace the following comment with the original mapping:
-                          // ...collaborators.map((c) => Padding(...)),
+                        
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -480,6 +481,7 @@ class _SettingsState extends State<Settings> {
                           style: const TextStyle(
                               color: Colors.white,
                               fontFamily: 'Main Font',
+                              fontWeight: FontWeight.bold,
                               fontSize: 16)),
                     ],
                   ),
@@ -545,6 +547,7 @@ class _SettingsState extends State<Settings> {
                       'Enable Biometric authentication, recommended for security',
                       style: TextStyle(
                           color: Colors.white,
+                          fontWeight: FontWeight.bold,
                           fontFamily: 'Main Font',
                           fontSize: 12)),
                   trailing: Switch(
@@ -595,29 +598,35 @@ class _SettingsState extends State<Settings> {
               ),
               const SizedBox(height: 16),
               Center(
-                child: TextButton.icon(
-                  onPressed: _deleting ? null : _confirmDeleteAccount,
-                  icon: const Icon(
-                    Icons.delete_forever,
-                    color: Colors.redAccent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.redAccent),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  label: _deleting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.redAccent,
+                  child: TextButton.icon(
+                    onPressed: _deleting ? null : _confirmDeleteAccount,
+                    icon: const Icon(
+                      Icons.delete_forever,
+                      color: Colors.redAccent,
+                    ),
+                    label: _deleting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.redAccent,
+                            ),
+                          )
+                        : const Text(
+                            'Delete account',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontFamily: 'Main Font',
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      : const Text(
-                          'Delete account',
-                          style: TextStyle(
-                            color: Colors.redAccent,
-                            fontFamily: 'Main Font',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  ),
                 ),
               ),
             ],

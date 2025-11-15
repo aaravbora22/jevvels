@@ -27,7 +27,7 @@ class BuildTextField extends StatelessWidget {
   InputDecoration _inputDecoration({String? hint}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Colors.white38),
+      hintStyle: const TextStyle(color: Colors.white),
       filled: true,
       fillColor: const Color(0xFF2C2B2B),
       enabledBorder: OutlineInputBorder(
@@ -63,6 +63,7 @@ class BuildTextField extends StatelessWidget {
           style: (textStyle ??
                   const TextStyle(
                     color: Colors.white,
+                    fontWeight: FontWeight.bold,
                     fontFamily: 'Main Font',
                     fontSize: 16, // Default if not passed
                   ))

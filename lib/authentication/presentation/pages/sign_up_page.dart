@@ -69,7 +69,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     const Text(
                       'Sign up to get started',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                         fontFamily: 'Main Font',
                         fontSize: 16,
                       ),
@@ -92,6 +93,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         color: Colors.white,
                         fontFamily: 'Main Font',
                         fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 32.0),

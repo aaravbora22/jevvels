@@ -26,10 +26,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Uses Bluetooth to connect and sync with nearby devices</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Uses Bluetooth to connect and sync with nearby devices</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http-alt._tcp.</string>
@@ -38,8 +34,6 @@
 	<string>Jevvels will need access to your camera to let you take item and bill photos.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Jevvels uses Face ID to let you quickly and securely unlock your account.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Uses WiFi to connect and sync with nearby devices</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Jevvels will need access to your photo gallery to upload item and bill images.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

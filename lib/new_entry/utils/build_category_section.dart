@@ -61,7 +61,7 @@ class _BuildCategorySectionState extends State<BuildCategorySection> {
           dropdownColor: const Color(0xFF2C2B2B),
           iconEnabledColor: const Color(0xFFB99750),
           decoration: customInputDecoration(),
-          style: const TextStyle(color: Colors.white, fontFamily: 'Main Font'),
+          style: const TextStyle(color: Colors.white, fontFamily: 'Main Font', fontWeight: FontWeight.bold),
           onChanged: (value) {
             setState(() {
               selectedCategory = value!;

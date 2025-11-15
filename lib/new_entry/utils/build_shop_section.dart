@@ -24,7 +24,11 @@ class _BuildShopSectionState extends State<BuildShopSection> {
     return BuildTextField(
       label: 'Shop Name',
       controller: shopNameController,
-      textStyle: TextStyle(),
+      textStyle: TextStyle(
+        color: Colors.white,
+        fontFamily: 'Main Font',
+        fontWeight: FontWeight.bold,
+      ),
       hint: 'Select or enter shop name',
       onChanged: (val) {
         if (widget.onShopChanged != null) {

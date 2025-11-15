@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
         if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Login failed: ${state.message}'),
+              content: Text('Login failed: ${state.message}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -69,8 +69,9 @@ class _LoginPageState extends State<LoginPage> {
                     const Text(
                       'Login to your account',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontFamily: 'Main Font',
+                        fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
@@ -92,6 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                         color: Colors.white,
                         fontFamily: 'Main Font',
                         fontSize: 16,
+                        fontWeight: FontWeight.bold
                       ),
                     ),
                     const SizedBox(height: 32.0),
