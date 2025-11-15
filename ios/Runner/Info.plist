@@ -25,7 +25,13 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http-alt._tcp.</string>
+    </array>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Jevvels uses WiFi to connect and sync with nearby devices</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Jevvels will need access to your camera to let you take item and bill photos.</string>
 	<key>NSFaceIDUsageDescription</key>
