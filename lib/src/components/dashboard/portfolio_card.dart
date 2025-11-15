@@ -23,7 +23,6 @@ class _PortfolioCardState extends State<PortfolioCard> {
     super.initState();
     _calculatePortfolio();
   }
-
   Future<void> _calculatePortfolio() async {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];

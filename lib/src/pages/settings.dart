@@ -13,7 +13,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-
 class Settings extends StatefulWidget {
   const Settings({
     super.key,
@@ -34,10 +33,131 @@ class _SettingsState extends State<Settings> {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _biometricEnabled = false;
 
+  bool _deleting = false; // 👈 NEW
+
   // Collaborators feature temporarily disabled.
   List<Map<String, String>> collaborators = [];
 
-    @override
+  Future<void> _confirmDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: const Color(0xFF272424),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Delete Account?',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Main Font',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'This will permanently delete your Jevvels account and all portfolio entries linked to it. This action cannot be undone.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    fontFamily: 'Main Font',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text(
+                    'Delete permanently',
+                    style: TextStyle(
+                      fontFamily: 'Main Font',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Color(0xFFB99750),
+                      fontFamily: 'Main Font',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _deleteAccount();
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    if (_deleting) return;
+
+    setState(() {
+      _deleting = true;
+    });
+
+    try {
+      final functions = Supabase.instance.client.functions;
+
+      // Call Edge Function instead of direct RPC
+      final response = await functions.invoke('delete-account');
+
+      // Optional: you can inspect response.data here
+
+      // Clear PowerSync local DB
+      await db.disconnectAndClear();
+
+      // Make sure the client is signed out
+      await Supabase.instance.client.auth.signOut();
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete account: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _deleting = false;
+        });
+      }
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     final user = Supabase.instance.client.auth.currentUser;
@@ -61,7 +181,7 @@ class _SettingsState extends State<Settings> {
     });
   }
 
-    Future<void> _toggleBiometric(bool value) async {
+  Future<void> _toggleBiometric(bool value) async {
     // If turning OFF: just disable and save.
     if (!value) {
       setState(() {
@@ -71,8 +191,6 @@ class _SettingsState extends State<Settings> {
       return;
     }
 
-    
-
     // If turning ON: check device support first.
     final canCheckBiometrics = await _localAuth.canCheckBiometrics;
     final isDeviceSupported = await _localAuth.isDeviceSupported();
@@ -80,7 +198,8 @@ class _SettingsState extends State<Settings> {
     if (!canCheckBiometrics || !isDeviceSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Biometric authentication not available on this device.'),
+          content:
+              Text('Biometric authentication not available on this device.'),
         ),
       );
       // Make sure switch goes back to OFF
@@ -120,7 +239,7 @@ class _SettingsState extends State<Settings> {
     }
   }
 
-    void _saveUsername() async {
+  void _saveUsername() async {
     final newUsername = _usernameController.text.trim();
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -230,9 +349,7 @@ class _SettingsState extends State<Settings> {
                 NavItem(
                   icon: Icons.settings_outlined,
                   label: 'Settings',
-                  onTap: () {
-                    
-                  },
+                  onTap: () {},
                 ),
               ],
             ),
@@ -415,30 +532,31 @@ class _SettingsState extends State<Settings> {
                       fontFamily: 'Main Font',
                       fontSize: 24)),
               Card(
-  color: const Color(0xFF2C2B2B),
-  margin: const EdgeInsets.symmetric(vertical: 12),
-  child: ListTile(
-    leading: const Icon(Icons.security, color: Color(0xFFB99750)),
-    title: const Text('Biometric Authentication',
-        style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Main Font',
-            fontWeight: FontWeight.bold)),
-    subtitle: const Text(
-        'Enable Biometric authentication, recommended for security',
-        style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Main Font',
-            fontSize: 12)),
-    trailing: Switch(
-      value: _biometricEnabled,
-      onChanged: (val) {
-        _toggleBiometric(val);   // <- THIS triggers Face ID sheet when enabling
-      },
-      activeColor: const Color(0xFFB99750),
-    ),
-  ),
-),
+                color: const Color(0xFF2C2B2B),
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.security, color: Color(0xFFB99750)),
+                  title: const Text('Biometric Authentication',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Main Font',
+                          fontWeight: FontWeight.bold)),
+                  subtitle: const Text(
+                      'Enable Biometric authentication, recommended for security',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Main Font',
+                          fontSize: 12)),
+                  trailing: Switch(
+                    value: _biometricEnabled,
+                    onChanged: (val) {
+                      _toggleBiometric(
+                          val); // <- THIS triggers Face ID sheet when enabling
+                    },
+                    activeColor: const Color(0xFFB99750),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 32),
               // Logout button
@@ -473,6 +591,33 @@ class _SettingsState extends State<Settings> {
                       ),
                     );
                   },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _deleting ? null : _confirmDeleteAccount,
+                  icon: const Icon(
+                    Icons.delete_forever,
+                    color: Colors.redAccent,
+                  ),
+                  label: _deleting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.redAccent,
+                          ),
+                        )
+                      : const Text(
+                          'Delete account',
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontFamily: 'Main Font',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],

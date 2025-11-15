@@ -16,21 +16,134 @@ class AuthGate extends StatelessWidget {
     return BlocBuilder<AuthBloc, bloc_auth.AuthState>(
       builder: (context, state) {
         if (state is bloc_auth.AuthAuthenticated) {
-          // ✅ User is logged in → now pass through biometric gate
+          // ✅ Logged in → go through biometric gate
           return const BiometricProtectedDashboard();
         } else if (state is bloc_auth.AuthLoading) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         } else {
-          return const LoginPage();
+          // ❌ Not logged in → show read-only dashboard
+          return const PublicDashboard();
         }
       },
     );
   }
 }
 
-/// 🔐 This widget runs Face ID / biometrics BEFORE showing Dashboard.
+class PublicDashboard extends StatelessWidget {
+  const PublicDashboard({super.key});
+
+  Future<void> _showLoginDialog(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        backgroundColor: const Color(0xFF0F0F0F), // Jevvels Deep Black
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Login Required',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Login to access your portfolio dashboard.',
+                style: TextStyle(
+                  color: Color(0xFFB8B8B8),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Login Button (Gold)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFF4D47E),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(
+                    color: Color(0xFF0F0F0F),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Not now button
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFF4D47E)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Not Now',
+                  style: TextStyle(
+                    color: Color(0xFFF4D47E),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  if (result == true) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
+  }
+}
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // 👀 Dashboard is fully visible
+        const Dashboard(),
+
+        // 🛡 Overlay that catches taps, but still allows scrolling
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => _showLoginDialog(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
 class BiometricProtectedDashboard extends StatefulWidget {
   const BiometricProtectedDashboard({super.key});
 
@@ -53,20 +166,17 @@ class _BiometricProtectedDashboardState
   }
 
   Future<void> _runBiometricCheck() async {
-    // 1️⃣ Is biometric lock even enabled?
     final enabled =
         await _secureStorage.read(key: 'biometric_enabled') == 'true';
 
     if (!enabled) {
-      // No lock → just show Dashboard
       if (!mounted) return;
       setState(() {
-        _checking = false;
+        _checking = false; // no biometric → just show Dashboard
       });
       return;
     }
 
-    // 2️⃣ Ask for Face ID / biometrics
     try {
       final ok = await _localAuth.authenticate(
         localizedReason: 'Unlock Jevvels with Face ID',
@@ -80,38 +190,34 @@ class _BiometricProtectedDashboardState
       if (!mounted) return;
 
       if (ok) {
-        // success → show Dashboard
         setState(() {
-          _checking = false;
+          _checking = false; // passed Face ID
         });
       } else {
-        // failed or cancelled → send to login (or keep a lock screen)
+        // failed or cancelled → send to login
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginPage()),
           (route) => false,
         );
       }
     } catch (e) {
-      // In case of any error, fail open or closed (your choice)
       if (!mounted) return;
+      // Here we "fail open" and show Dashboard anyway.
+      // If you want fail-closed, push LoginPage instead.
       setState(() {
         _checking = false;
-       } // here we just show Dashboard anyway
-      );
-      // If you prefer fail-closed, instead push LoginPage here.
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      // While Face ID sheet is up / we are checking
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // ✅ Authenticated + (if enabled) passed biometrics → enter app
     return const Dashboard();
   }
 }
