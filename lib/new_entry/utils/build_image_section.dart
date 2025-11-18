@@ -116,9 +116,10 @@ class _BuildImageSectionState extends State<BuildImageSection> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildImageUploader('Upload Bill Image', true, billImage),
-        const SizedBox(height: 15),
+        
         _buildImageUploader('Upload Item Image', false, itemImage),
+        const SizedBox(height: 15),
+        _buildImageUploader('Upload Bill Image', true, billImage),
       ],
     );
   }

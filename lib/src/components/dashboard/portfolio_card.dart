@@ -189,6 +189,38 @@ for (final row in metalsCache) {
   return 0.999;
 }
 
+// add Indian number formatting helper
+  String formatIndianNumber(num value, {int decimals = 2}) {
+    // handle negative values
+    final isNegative = value < 0;
+    final absValue = value.abs();
+    // prepare fixed decimal string
+    final fixed = absValue.toStringAsFixed(decimals);
+    final parts = fixed.split('.');
+    String intPart = parts[0];
+    final fracPart = parts.length > 1 ? parts[1] : '';
+
+    // If integer part length <= 3, no special grouping
+    if (intPart.length <= 3) {
+      final result = intPart + (decimals > 0 ? '.$fracPart' : '');
+      return isNegative ? '-$result' : result;
+    }
+
+    // split last 3 digits, then group remaining by 2
+    final last3 = intPart.substring(intPart.length - 3);
+    String rem = intPart.substring(0, intPart.length - 3);
+
+    final List<String> groups = [];
+    while (rem.length > 2) {
+      groups.insert(0, rem.substring(rem.length - 2));
+      rem = rem.substring(0, rem.length - 2);
+    }
+    if (rem.isNotEmpty) groups.insert(0, rem);
+
+    final groupedInt = groups.join(',') + ',' + last3;
+    final out = groupedInt + (decimals > 0 ? '.$fracPart' : '');
+    return isNegative ? '-$out' : out;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +259,8 @@ for (final row in metalsCache) {
                         fontFamily: 'Main Font'),
                   ),
                   Text(
-                    currentValue.toStringAsFixed(2),
+                    // formatted with Indian commas and rupee symbol
+                    '₹${formatIndianNumber(currentValue, decimals: 2)}',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 36,
@@ -246,7 +279,8 @@ for (final row in metalsCache) {
                         fontFamily: 'Main Font'),
                   ),
                   Text(
-                    boughtValue.toStringAsFixed(2),
+                    // formatted with Indian commas and rupee symbol
+                    '₹${formatIndianNumber(boughtValue, decimals: 2)}',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -264,6 +298,9 @@ for (final row in metalsCache) {
                 children: metalPercentages.entries.map((entry) {
                   final metalKey = entry.key;
                   final weight = metalTotals[metalKey] ?? 0.0;
+                  final metalVal = metalValues[metalKey];
+                  final metalValText =
+                      metalVal != null ? ' ₹${formatIndianNumber(metalVal, decimals: 2)}' : ' --';
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -283,7 +320,8 @@ for (final row in metalsCache) {
                             fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        ' ₹${metalValues[metalKey]?.toStringAsFixed(2) ?? '--'}',
+                        // use formatted currency
+                        metalValText,
                         style: const TextStyle(
                             color: Colors.white,
                             fontFamily: 'Main Font',
@@ -291,7 +329,8 @@ for (final row in metalsCache) {
                             fontSize: 14),
                       ),
                       Text(
-                        ' (${weight.toStringAsFixed(2)}g)',
+                        // formatted weight (commas applied if large)
+                        ' (${formatIndianNumber(weight, decimals: 2)}g)',
                         style: const TextStyle(
                             color: Colors.white70,
                             fontFamily: 'Main Font',

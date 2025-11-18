@@ -64,7 +64,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
               child: BuildTextField(
                 label: 'Total Price',
                 controller: priceController,
-                keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                 hint: 'Amount Paid',
                 onChanged: (_) => _notifyParent(),
               ),
@@ -75,7 +75,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
         BuildTextField(
           label: 'Making Cost (per gram)',
           controller: makingCostController,
-          keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
           onChanged: (_) => _notifyParent(),
         ),
         const SizedBox(height: 10),
@@ -83,7 +83,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
           label: 'Precious Metal/Diamond Rate (per gram)',
           controller: metalRateController,
           hint: '',
-          keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
           onChanged: (_) => _notifyParent(),
         ),
       ],

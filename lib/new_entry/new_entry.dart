@@ -148,11 +148,12 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Do you want to upload this image? It will be saved to your device and synced to Supabase.',
+                  'Do you want to upload this image?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Main Font',
-                    color: Colors.white70,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
@@ -411,6 +412,8 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
               const SizedBox(height: 20),
               BuildTextField(
                 label: 'Total Weight (g)',
+                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+
                 controller: totalWeightController,
                 textStyle: const TextStyle(
                   fontFamily: 'Main Font',

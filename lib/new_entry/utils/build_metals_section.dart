@@ -178,7 +178,7 @@ class _BuildMetalsSectionState extends State<BuildMetalsSection> {
                     child: BuildTextField(
                       label: 'Weight (g)',
                       initialValue: metal["weight"],
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                       onChanged: (v) {
                         metal["weight"] = v;
                         _notifyParent();

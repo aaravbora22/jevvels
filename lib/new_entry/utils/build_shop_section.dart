@@ -16,14 +16,14 @@ class BuildShopSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BuildTextField(
-      label: 'Shop Name',
+      label: 'Store Name',
       controller: controller,
       textStyle: const TextStyle(
         color: Colors.white,
         fontFamily: 'Main Font',
         fontWeight: FontWeight.bold,
       ),
-      hint: 'Select or enter shop name',
+      hint: 'Select or enter store name',
       onChanged: (val) {
         onShopChanged?.call(val);
       },
