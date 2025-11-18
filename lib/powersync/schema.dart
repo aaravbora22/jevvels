@@ -25,11 +25,15 @@ final schema = Schema([
     Column.text('notes'),
   ]),
   const Table('metals', [
-    Column.text('jewelry_item_id'),
-    Column.real('weight'),
-    Column.text('type'),
-    Column.integer('karat'),
-  ]),
+  Column.text('jewelry_item_id'),
+  Column.real('weight'),
+  Column.text('type'),
+  Column.integer('karat'),
+  Column.integer('purity'),
+  Column.text('user_id'),
+]),
+
+
   const Table('pricing_details', [
     Column.text('jewelry_item_id'),
     Column.real('total_price'),

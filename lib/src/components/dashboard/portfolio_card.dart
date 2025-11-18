@@ -13,7 +13,7 @@ class _PortfolioCardState extends State<PortfolioCard> {
   double boughtValue = 0.0;
   Map<String, double> metalPercentages = {};
   Map<String, double> metalValues = {};
-  Map<String, double> metalTotals = {}; 
+  Map<String, double> metalTotals = {};
   bool _loading = true;
   String? _error;
 
@@ -22,19 +22,24 @@ class _PortfolioCardState extends State<PortfolioCard> {
     super.initState();
     _calculatePortfolio();
   }
+
   Future<void> _calculatePortfolio() async {
     try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final metalsCache = await Supabase.instance.client
-          .from('metals_cache')
-          .select('metal, price_in_inr')
-          .eq('fetched_at', today)
-          .order('metal', ascending: true);
-      final metalRates = <String, double>{};
-      for (final row in metalsCache) {
-        metalRates[row['metal'].toString().toLowerCase()] =
-            (row['price_in_inr'] as num).toDouble();
-      }
+
+final metalsCache = await Supabase.instance.client
+    .from('metals_cache')
+    .select('metal, price_in_inr')
+    .order('fetched_at', ascending: false);
+
+final metalRates = <String, double>{};
+
+for (final row in metalsCache) {
+  final metal = row['metal'].toString().toLowerCase();
+  if (!metalRates.containsKey(metal)) {
+    metalRates[metal] = (row['price_in_inr'] as num).toDouble();
+  }
+}
+
 
       final items = await Supabase.instance.client
           .from('jewelry_items')
@@ -43,7 +48,7 @@ class _PortfolioCardState extends State<PortfolioCard> {
 
       double totalCurrentValue = 0.0;
       double totalBoughtValue = 0.0;
-      metalTotals = {}; 
+      metalTotals = {};
       Map<String, double> metalCurrentValues = {};
 
       // fetch all pricing_details for bought value
@@ -63,20 +68,48 @@ class _PortfolioCardState extends State<PortfolioCard> {
 
         final itemMetals = await Supabase.instance.client
             .from('metals')
-            .select('type, weight')
+            .select('type, weight, karat, purity')
             .eq('jewelry_item_id', itemId);
 
         if (itemMetals.isEmpty) continue;
 
         for (final m in itemMetals) {
-          final type = m['type'].toString().toLowerCase();
-          final weight = (m['weight'] as num).toDouble();
-          final rate = metalRates[type] ?? 0.0;
-          final value = weight * rate;
-          totalCurrentValue += value;
-          metalTotals[type] = (metalTotals[type] ?? 0) + weight;
-          metalCurrentValues[type] = (metalCurrentValues[type] ?? 0) + value;
-        }
+  final type = m['type'].toString().toLowerCase();
+  final weight = (m['weight'] as num).toDouble();
+
+  // Be defensive with types from Supabase
+  final karatNum = m['karat'] as num?;
+  final purityNum = m['purity'] as num?;
+
+  final karat = karatNum?.toInt();
+  final purity = purityNum?.toInt();
+
+  // Base rate from metals_cache
+  double baseRate = metalRates[type] ?? 0.0;
+
+  // Optional: debug to see if we’re missing rates
+  // debugPrint('Metal=$type weight=$weight baseRate=$baseRate karat=$karat purity=$purity');
+
+  final purityFraction = _computePurityFraction(
+    type: type,
+    karat: karat,
+    purity: purity,
+  );
+
+  final double refPurity =
+      type.contains('gold') ? 0.9167 /* 22k */ : 0.999 /* 999 */;
+
+  final adjustedRate = refPurity > 0
+      ? baseRate * (purityFraction / refPurity)
+      : baseRate;
+
+  final value = weight * adjustedRate;
+
+  totalCurrentValue += value;
+  metalTotals[type] = (metalTotals[type] ?? 0) + weight;
+  metalCurrentValues[type] = (metalCurrentValues[type] ?? 0) + value;
+}
+
       }
 
       final totalWeight = metalTotals.values.fold(0.0, (a, b) => a + b);
@@ -112,6 +145,50 @@ class _PortfolioCardState extends State<PortfolioCard> {
       });
     }
   }
+
+  double _computePurityFraction({
+  required String type,
+  int? karat,
+  int? purity,
+}) {
+  final metal = type.toLowerCase();
+
+  // ---- GOLD ----
+  if (metal.contains('gold')) {
+    if (karat != null) {
+      switch (karat) {
+        case 24:
+          return 0.999; // 99.9%
+        case 22:
+          return 0.9167; // 91.67%
+        case 20:
+          return 0.833; // 83.3%
+        case 18:
+          return 0.75; // 75%
+        default:
+          // fallback: scale vs 24k
+          return (karat / 24.0) * 0.999;
+      }
+    }
+
+    // No karat, but maybe purity like 916, 999
+    if (purity != null) {
+      return purity / 1000.0;
+    }
+
+    // No info → assume 22k
+    return 0.9167;
+  }
+
+  // ---- OTHER METALS (silver, platinum, etc.) ----
+  if (purity != null) {
+    return purity / 1000.0; // e.g. 999, 925, etc.
+  }
+
+  // No purity set → assume 999
+  return 0.999;
+}
+
 
   @override
   Widget build(BuildContext context) {

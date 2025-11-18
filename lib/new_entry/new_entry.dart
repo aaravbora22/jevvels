@@ -57,9 +57,16 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
 
   String? _category;
   String? _customCategory;
-  List<Map<String, String?>> _metals = [
-    {'metal': null, 'weight': null, 'karat': null},
+  List<Map<String, dynamic>> _metals = [
+    {
+      "metal": null,
+      "weight": null,
+      "is_karat": true,
+      "karat": null,
+      "purity": null,
+    }
   ];
+
   String? _shopName;
   String? _notes;
   Map<String, dynamic>? _pricing;
@@ -200,6 +207,83 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
     return result == true;
   }
 
+  Future<void> _cleanupTempImages() async {
+    try {
+      final storage = Supabase.instance.client.storage.from('images');
+
+      // 🔹 Clean up bill image if present
+      if (_billImageId != null) {
+        // Get remote path from bill_images
+        final rows = await db.execute(
+          'SELECT path FROM bill_images WHERE id = ?',
+          [_billImageId],
+        );
+        final billPath = rows.isNotEmpty ? rows.first['path'] as String? : null;
+
+        // Delete from Supabase Storage
+        if (billPath != null && billPath.isNotEmpty) {
+          try {
+            await storage.remove([billPath]);
+          } catch (e) {
+            print('⚠️ Error deleting bill image from storage: $e');
+          }
+        }
+
+        // Delete from attachments_queue (so it doesn't try to upload later)
+        await db.execute(
+          'DELETE FROM attachments_queue WHERE id = ?',
+          [_billImageId],
+        );
+
+        // Delete from bill_images table
+        await db.execute(
+          'DELETE FROM bill_images WHERE id = ?',
+          [_billImageId],
+        );
+      }
+
+      // 🔹 Clean up item image if present
+      if (_itemImageId != null) {
+        final rows = await db.execute(
+          'SELECT path FROM item_images WHERE id = ?',
+          [_itemImageId],
+        );
+        final itemPath = rows.isNotEmpty ? rows.first['path'] as String? : null;
+
+        if (itemPath != null && itemPath.isNotEmpty) {
+          try {
+            await storage.remove([itemPath]);
+          } catch (e) {
+            print('⚠️ Error deleting item image from storage: $e');
+          }
+        }
+
+        await db.execute(
+          'DELETE FROM attachments_queue WHERE id = ?',
+          [_itemImageId],
+        );
+
+        await db.execute(
+          'DELETE FROM item_images WHERE id = ?',
+          [_itemImageId],
+        );
+      }
+
+      // Clear local state
+      if (mounted) {
+        setState(() {
+          _billImage = null;
+          _billImageId = null;
+          _itemImage = null;
+          _itemImageId = null;
+        });
+      }
+    } catch (e, st) {
+      print('❌ Error during _cleanupTempImages: $e');
+      print(st);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,8 +301,15 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.close, color: Color(0xFFB99750)),
-            onPressed: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const Dashboard())),
+            onPressed: () async {
+              // 🔹 Clean up any temp images first
+              await _cleanupTempImages();
+
+              if (!mounted) return;
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const Dashboard()),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -243,21 +334,21 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                     final ok = await _confirmUploadDialog();
                     if (ok) {
                       final billId = _uuid.v4();
-        
+
                       // 🔹 This is the *remote* path in Supabase
                       final remotePath = 'bills/$billId.jpg';
-        
+
                       // 🔹 Store remote path in bill_images.path
                       await db.execute(
                         'INSERT INTO bill_images (id, path) VALUES (?, ?)',
                         [billId, remotePath],
                       );
-        
+
                       setState(() {
                         _billImage = bill;
                         _billImageId = billId;
                       });
-        
+
                       // 🔹 Copy file to local attachments/bills/<id>.jpg + queue upload
                       await _copyAndQueue(bill, billId, _billAttachmentQueue);
                     } else {
@@ -272,20 +363,20 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                     final ok = await _confirmUploadDialog();
                     if (ok) {
                       final itemId = _uuid.v4();
-        
+
                       // REMOTE path for Supabase
                       final remotePath = 'items/$itemId.jpg';
-        
+
                       await db.execute(
                         'INSERT INTO item_images (id, path) VALUES (?, ?)',
                         [itemId, remotePath],
                       );
-        
+
                       setState(() {
                         _itemImage = item;
                         _itemImageId = itemId;
                       });
-        
+
                       await _copyAndQueue(item, itemId, _itemAttachmentQueue);
                     } else {
                       setState(() {
@@ -302,8 +393,8 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                 customCategoryController: _customCategoryController,
                 onCategoryChanged: (cat, customCat) {
                   setState(() {
-                    _selectedCategory = cat; 
-                    _category = cat; 
+                    _selectedCategory = cat;
+                    _category = cat;
                     _customCategory = customCat;
                   });
                 },
@@ -311,7 +402,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
               const SizedBox(height: 20),
               BuildMetalsSection(
                 metals: _metals,
-                onMetalsChanged: (metals) {
+                onMetalsChanged: (List<Map<String, dynamic>> metals) {
                   setState(() {
                     _metals = metals;
                   });
@@ -365,16 +456,17 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                     );
                     return;
                   }
-        
+
                   final userId = user.id;
                   final uuid = Uuid();
                   final jewelryItemId = uuid.v4();
-        
+
                   // category lookup/insert
                   final categoryName = _category ?? _customCategory ?? '';
                   String categoryId;
                   final catRes = await db.execute(
-                      'SELECT id FROM categories WHERE name = ?', [categoryName]);
+                      'SELECT id FROM categories WHERE name = ?',
+                      [categoryName]);
                   if (catRes.isNotEmpty) {
                     categoryId = catRes.first['id'];
                   } else {
@@ -384,12 +476,12 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                       [categoryId, categoryName],
                     );
                   }
-        
+
                   // shop lookup/insert
                   final shopName = _shopName ?? '';
                   String shopId;
-                  final shopRes = await db
-                      .execute('SELECT id FROM shops WHERE name = ?', [shopName]);
+                  final shopRes = await db.execute(
+                      'SELECT id FROM shops WHERE name = ?', [shopName]);
                   if (shopRes.isNotEmpty) {
                     shopId = shopRes.first['id'];
                   } else {
@@ -399,7 +491,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                       [shopId, shopName],
                     );
                   }
-        
+
                   // insert jewelry_item
                   await db.execute(
                     '''
@@ -419,21 +511,32 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                       _notes ?? '',
                     ],
                   );
-        
+
                   // metals
                   for (final metal in _metals) {
                     await db.execute(
-                      'INSERT INTO metals (id, jewelry_item_id, type, weight, karat) VALUES (?, ?, ?, ?, ?)',
+                      '''
+                      INSERT INTO metals (
+                        id, jewelry_item_id, type, weight, karat, purity, user_id
+                      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                      ''',
                       [
                         uuid.v4(),
                         jewelryItemId,
-                        metal['metal'],
-                        metal['weight'],
-                        metal['karat'],
+                        metal["metal"],
+                        metal["weight"] != null
+                            ? double.tryParse(metal["weight"].toString())
+                            : null,
+                        metal["karat"] != null
+                            ? int.tryParse(metal["karat"].toString())
+                            : null,
+                        metal["purity"] != null
+                            ? int.tryParse(metal["purity"].toString())
+                            : null,
+                        userId.toString(),
                       ],
                     );
                   }
-        
                   // pricing details
                   if (_pricing != null) {
                     await db.execute(
@@ -451,7 +554,7 @@ class _JewelryFormPageState extends State<JewelryFormPage> {
                       ],
                     );
                   }
-        
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Entry saved!')),
                   );

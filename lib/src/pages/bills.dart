@@ -135,140 +135,141 @@ class _BillsPageState extends State<BillsPage> {
   }
 
   Future<void> _deleteBill(Map<String, dynamic> bill) async {
-    final billId = bill['id'];
+  // Always treat id as String
+  final jewelryItemId = bill['id'].toString();
 
-    // Get image + shop/category ids from jewelry_items
-    final jiRows = await db.execute(
-      'SELECT bill_images_id, item_images_id, shop_id, category_id '
-      'FROM jewelry_items WHERE id = ?',
-      [billId],
-    );
+  // Get image + shop/category ids from jewelry_items
+  final jiRows = await db.execute(
+    'SELECT bill_images_id, item_images_id, shop_id, category_id '
+    'FROM jewelry_items WHERE id = ?',
+    [jewelryItemId],
+  );
 
-    if (jiRows.isEmpty) {
-      print('⚠️ No jewelry_item found for id $billId');
-      return;
-    }
-
-    final ji = jiRows.first;
-
-    String? billImageId = ji['bill_images_id']?.toString();
-    String? itemImageId = ji['item_images_id']?.toString();
-    final shopId = ji['shop_id'];
-    final catId = ji['category_id'];
-
-    // Get stored *paths* from bill_images / item_images
-    String? billImagePath;
-    String? itemImagePath;
-
-    if (billImageId != null) {
-      final billImg = await db.execute(
-        'SELECT path FROM bill_images WHERE id = ?',
-        [billImageId],
-      );
-      billImagePath =
-          billImg.isNotEmpty ? billImg.first['path'] as String? : null;
-    }
-
-    if (itemImageId != null) {
-      final itemImg = await db.execute(
-        'SELECT path FROM item_images WHERE id = ?',
-        [itemImageId],
-      );
-      itemImagePath =
-          itemImg.isNotEmpty ? itemImg.first['path'] as String? : null;
-    }
-
-    //  Delete from Supabase Storage (images bucket)
-    final storage = Supabase.instance.client.storage.from('images');
-
-    if (billImagePath != null && billImagePath.isNotEmpty) {
-      try {
-        await storage.remove([billImagePath]); // e.g. 'bills/<id>.jpg'
-      } catch (e) {
-        print('⚠️ Error deleting bill image from storage: $e');
-      }
-    }
-
-    if (itemImagePath != null && itemImagePath.isNotEmpty) {
-      try {
-        await storage.remove([itemImagePath]); // e.g. 'items/<id>.jpg'
-      } catch (e) {
-        print('⚠️ Error deleting item image from storage: $e');
-      }
-    }
-
-    // Delete metals
-    await db.execute(
-      'DELETE FROM metals WHERE jewelry_item_id = ?',
-      [billId],
-    );
-
-    // Delete pricing_details
-    await db.execute(
-      'DELETE FROM pricing_details WHERE jewelry_item_id = ?',
-      [billId],
-    );
-
-    // Delete from attachments_queue (if used)
-    if (billImageId != null) {
-      await db.execute(
-        'DELETE FROM attachments_queue WHERE id = ?',
-        [billImageId],
-      );
-    }
-    if (itemImageId != null) {
-      await db.execute(
-        'DELETE FROM attachments_queue WHERE id = ?',
-        [itemImageId],
-      );
-    }
-
-    // Delete jewelry_items
-    await db.execute(
-      'DELETE FROM jewelry_items WHERE id = ?',
-      [billId],
-    );
-
-    // Delete bill_images and item_images
-    if (billImageId != null) {
-      await db.execute(
-        'DELETE FROM bill_images WHERE id = ?',
-        [billImageId],
-      );
-    }
-    if (itemImageId != null) {
-      await db.execute(
-        'DELETE FROM item_images WHERE id = ?',
-        [itemImageId],
-      );
-    }
-
-    // Delete shop if unused
-    if (shopId != null) {
-      final shopCount = await db.execute(
-        'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
-        [shopId],
-      );
-      if (shopCount.isNotEmpty &&
-          (shopCount.first['cnt'] == 0 || shopCount.first['cnt'] == 0.0)) {
-        await db.execute('DELETE FROM shops WHERE id = ?', [shopId]);
-      }
-    }
-
-    // Delete category if unused
-    if (catId != null) {
-      final catCount = await db.execute(
-        'SELECT COUNT(*) as cnt FROM jewelry_items WHERE category_id = ?',
-        [catId],
-      );
-      if (catCount.isNotEmpty &&
-          (catCount.first['cnt'] == 0 || catCount.first['cnt'] == 0.0)) {
-        await db.execute('DELETE FROM categories WHERE id = ?', [catId]);
-      }
-    }
-
-    await _fetchBills();
+  if (jiRows.isEmpty) {
+    print('⚠️ No jewelry_item found for id $jewelryItemId');
+    return;
   }
+
+  final ji = jiRows.first;
+
+  String? billImageId = ji['bill_images_id']?.toString();
+  String? itemImageId = ji['item_images_id']?.toString();
+  final shopId = ji['shop_id'];
+  final catId = ji['category_id'];
+
+  // --- 1️⃣ Delete metals first ---
+  final metalsBefore = await db.execute(
+    'SELECT COUNT(*) as cnt FROM metals WHERE jewelry_item_id = ?',
+    [jewelryItemId],
+  );
+  print('🧪 Metals before delete: ${metalsBefore.first['cnt']}');
+
+  await db.execute(
+    'DELETE FROM metals WHERE jewelry_item_id = ?',
+    [jewelryItemId],
+  );
+
+  final metalsAfter = await db.execute(
+    'SELECT COUNT(*) as cnt FROM metals WHERE jewelry_item_id = ?',
+    [jewelryItemId],
+  );
+  print('🧪 Metals after delete: ${metalsAfter.first['cnt']}');
+
+  // --- 2️⃣ Delete pricing_details ---
+  await db.execute(
+    'DELETE FROM pricing_details WHERE jewelry_item_id = ?',
+    [jewelryItemId],
+  );
+
+  // --- 3️⃣ Resolve image paths from bill_images / item_images ---
+  String? billImagePath;
+  String? itemImagePath;
+
+  if (billImageId != null) {
+    final billImg = await db.execute(
+      'SELECT path FROM bill_images WHERE id = ?',
+      [billImageId],
+    );
+    billImagePath =
+        billImg.isNotEmpty ? billImg.first['path'] as String? : null;
+  }
+
+  if (itemImageId != null) {
+    final itemImg = await db.execute(
+      'SELECT path FROM item_images WHERE id = ?',
+      [itemImageId],
+    );
+    itemImagePath =
+        itemImg.isNotEmpty ? itemImg.first['path'] as String? : null;
+  }
+
+  // --- 4️⃣ Delete from Supabase Storage (images bucket) ---
+  final storage = Supabase.instance.client.storage.from('images');
+
+  if (billImagePath != null && billImagePath.isNotEmpty) {
+    try {
+      await storage.remove([billImagePath]); // e.g. 'bills/<id>.jpg'
+    } catch (e) {
+      print('⚠️ Error deleting bill image from storage: $e');
+    }
+  }
+
+  if (itemImagePath != null && itemImagePath.isNotEmpty) {
+    try {
+      await storage.remove([itemImagePath]); // e.g. 'items/<id>.jpg'
+    } catch (e) {
+      print('⚠️ Error deleting item image from storage: $e');
+    }
+  }
+
+  // --- 5️⃣ Delete attachments_queue (if used) ---
+  if (billImageId != null) {
+    await db.execute(
+      'DELETE FROM attachments_queue WHERE id = ?',
+      [billImageId],
+    );
+  }
+  if (itemImageId != null) {
+    await db.execute(
+      'DELETE FROM attachments_queue WHERE id = ?',
+      [itemImageId],
+    );
+  }
+
+  // --- 6️⃣ Delete from jewelry_items ---
+  await db.execute(
+    'DELETE FROM jewelry_items WHERE id = ?',
+    [jewelryItemId],
+  );
+
+  // --- 7️⃣ Delete shop if unused ---
+  if (shopId != null) {
+    final shopCount = await db.execute(
+      'SELECT COUNT(*) as cnt FROM jewelry_items WHERE shop_id = ?',
+      [shopId],
+    );
+    if (shopCount.isNotEmpty &&
+        (shopCount.first['cnt'] == 0 || shopCount.first['cnt'] == 0.0)) {
+      await db.execute('DELETE FROM shops WHERE id = ?', [shopId]);
+    }
+  }
+
+  // --- 8️⃣ Delete category if unused ---
+  if (catId != null) {
+    final catCount = await db.execute(
+      'SELECT COUNT(*) as cnt FROM jewelry_items WHERE category_id = ?',
+      [catId],
+    );
+    if (catCount.isNotEmpty &&
+        (catCount.first['cnt'] == 0 || catCount.first['cnt'] == 0.0)) {
+      await db.execute('DELETE FROM categories WHERE id = ?', [catId]);
+    }
+  }
+
+  // --- 9️⃣ Reload list ---
+  await _fetchBills();
+}
+
 
   @override
   Widget build(BuildContext context) {

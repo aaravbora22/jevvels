@@ -80,7 +80,7 @@ class _BuildPricingSectionState extends State<BuildPricingSection> {
         ),
         const SizedBox(height: 10),
         BuildTextField(
-          label: 'Precious Metal Rate (per gram)',
+          label: 'Precious Metal/Diamond Rate (per gram)',
           controller: metalRateController,
           hint: '',
           keyboardType: TextInputType.number,

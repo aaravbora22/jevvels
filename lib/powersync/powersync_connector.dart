@@ -33,7 +33,7 @@ class MyBackendConnector extends PowerSyncBackendConnector {
 
     // POWERSYNC_ENDPOINT is already loaded in main.dart via dotenv
     final endpoint = dotenv.env['POWERSYNC_ENDPOINT'] ??
-    'https://687b42e9084dcafd4bbe2461.powersync.journeyapps.com';
+    'https://687b42e9084dcafd4bbe2461.powersync.journeyapps.com/sync';
 
     return PowerSyncCredentials(
       endpoint: endpoint,

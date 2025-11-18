@@ -20,33 +20,44 @@ class _GoldPriceCardState extends State<GoldPriceCard> {
     _fetchMetals();
   }
 
-  Future<void> _fetchMetals() async {
-    try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final data = await Supabase.instance.client
-          .from('metals_cache')
-          .select('metal, price_in_inr, fetched_at')
-          .eq('fetched_at', today)
-          .order('metal', ascending: true)
-          .then((result) => result as List<dynamic>);
-      final metalsMap = <String, double>{};
-      for (final row in data) {
-        metalsMap[row['metal']] = (row['price_in_inr'] as num).toDouble();
+Future<void> _fetchMetals() async {
+  try {
+    final data = await Supabase.instance.client
+        .from('metals_cache')
+        .select('metal, price_in_inr, fetched_at')
+        .order('fetched_at', ascending: false);   // ← newest first
+
+    final metalsMap = <String, double>{};
+
+    // Pick ONLY the latest value for each metal
+    for (final row in data) {
+      final metal = row['metal'].toString();
+      final price = (row['price_in_inr'] as num).toDouble();
+
+      // only take first (latest) value per metal
+      if (!metalsMap.containsKey(metal)) {
+        metalsMap[metal] = price;
       }
-      setState(() {
-        metals = metalsMap;
-        updatedDate = data.isNotEmpty
-            ? DateTime.parse(data.first['fetched_at'])
-            : DateTime.now();
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
     }
+
+    final DateTime latestFetchedAt = data.isNotEmpty
+        ? DateTime.parse(data.first['fetched_at'].toString())
+        : DateTime.now();
+
+    setState(() {
+      metals = metalsMap;
+      updatedDate = latestFetchedAt;
+      _loading = false;
+    });
+
+  } catch (e) {
+    setState(() {
+      _error = e.toString();
+      _loading = false;
+    });
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
