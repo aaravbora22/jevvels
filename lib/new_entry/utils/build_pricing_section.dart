@@ -13,7 +13,7 @@ class BuildPricingSection extends StatefulWidget {
 
 class _BuildPricingSectionState extends State<BuildPricingSection> {
   String _currency = 'INR';
-  final List<String> _currencies = ['USD', 'INR', 'EUR'];
+  final List<String> _currencies = ['INR',];
   final TextEditingController priceController = TextEditingController();
   final TextEditingController makingCostController = TextEditingController();
   final TextEditingController metalRateController = TextEditingController();

@@ -3,41 +3,58 @@ import 'package:jevvels/widgets/build_text_field.dart';
 
 typedef MetalsChanged = void Function(List<Map<String, String?>> metals);
 
-class BuildMetalsSection extends StatefulWidget {
+class BuildMetalsSection extends StatelessWidget {
   final MetalsChanged? onMetalsChanged;
-  const BuildMetalsSection({super.key, this.onMetalsChanged});
+  final List<Map<String, String?>> metals;
 
-  @override
-  State<BuildMetalsSection> createState() => _BuildMetalsSectionState();
-}
+  const BuildMetalsSection({
+    super.key,
+    this.onMetalsChanged,
+    required this.metals,
+  });
 
-class _BuildMetalsSectionState extends State<BuildMetalsSection> {
-  List<Map<String, String?>> metalEntries = [
-    {'metal': null, 'weight': null, 'karat': null},
-  ];
+  void _updateMetal(int index, String field, String value) {
+    if (onMetalsChanged == null) return;
 
-  void _notifyParent() {
-    if (widget.onMetalsChanged != null) {
-      widget.onMetalsChanged!(List<Map<String, String?>>.from(metalEntries));
-    }
+    final updated = List<Map<String, String?>>.from(metals);
+    updated[index] = Map<String, String?>.from(updated[index])
+      ..[field] = value;
+    onMetalsChanged!(updated);
   }
 
-  Widget _buildMetalSection() {
+  void _addMetal() {
+    if (onMetalsChanged == null) return;
+
+    final updated = List<Map<String, String?>>.from(metals)
+      ..add({'metal': null, 'weight': null, 'karat': null});
+    onMetalsChanged!(updated);
+  }
+
+  void _removeMetal(int index) {
+    if (onMetalsChanged == null) return;
+
+    final updated = List<Map<String, String?>>.from(metals)..removeAt(index);
+    onMetalsChanged!(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Metals Used',
           style: TextStyle(
-              color: Colors.white,
-              fontFamily: 'Main Font',
-              fontWeight: FontWeight.bold,
-              fontSize: 24),
+            color: Colors.white,
+            fontFamily: 'Main Font',
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
         ),
         const SizedBox(height: 10),
-        ...metalEntries.asMap().entries.map((entry) {
-          int index = entry.key;
-          Map<String, String?> metal = entry.value;
+        ...metals.asMap().entries.map((entry) {
+          final index = entry.key;
+          final metal = entry.value;
 
           return Column(
             children: [
@@ -47,10 +64,7 @@ class _BuildMetalsSectionState extends State<BuildMetalsSection> {
                     child: BuildTextField(
                       label: 'Metal',
                       initialValue: metal['metal'],
-                      onChanged: (val) {
-                        metal['metal'] = val;
-                        _notifyParent();
-                      },
+                      onChanged: (val) => _updateMetal(index, 'metal', val),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -59,10 +73,7 @@ class _BuildMetalsSectionState extends State<BuildMetalsSection> {
                       label: 'Weight (g)',
                       initialValue: metal['weight'],
                       keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        metal['weight'] = val;
-                        _notifyParent();
-                      },
+                      onChanged: (val) => _updateMetal(index, 'weight', val),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -70,22 +81,16 @@ class _BuildMetalsSectionState extends State<BuildMetalsSection> {
                     child: BuildTextField(
                       label: 'Karat/Purity',
                       initialValue: metal['karat'],
-                      onChanged: (val) {
-                        metal['karat'] = val;
-                        _notifyParent();
-                      },
+                      onChanged: (val) => _updateMetal(index, 'karat', val),
                     ),
                   ),
                   IconButton(
-                    onPressed: () {
-                      setState(() {
-                        metalEntries.removeAt(index);
-                        _notifyParent();
-                      });
-                    },
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: Colors.red),
-                  )
+                    onPressed: () => _removeMetal(index),
+                    icon: const Icon(
+                      Icons.remove_circle_outline,
+                      color: Colors.red,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -95,28 +100,20 @@ class _BuildMetalsSectionState extends State<BuildMetalsSection> {
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
-            onPressed: () {
-              setState(() {
-                metalEntries
-                    .add({'metal': null, 'weight': null, 'karat': null});
-                _notifyParent();
-              });
-            },
+            onPressed: _addMetal,
             icon: const Icon(Icons.add, color: Color(0xFFB99750)),
-            label: const Text('Add Metal',
-                style: TextStyle(
-                    color: Color(0xFFB99750),
-                    fontFamily: 'Main Font',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
+            label: const Text(
+              'Add Metal',
+              style: TextStyle(
+                color: Color(0xFFB99750),
+                fontFamily: 'Main Font',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
           ),
-        )
+        ),
       ],
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildMetalSection();
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jevvels/powersync/powersync_connector.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PortfolioCard extends StatefulWidget {

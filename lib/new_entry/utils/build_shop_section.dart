@@ -3,46 +3,33 @@ import 'package:jevvels/widgets/build_text_field.dart';
 
 typedef ShopChanged = void Function(String shopName);
 
-class BuildShopSection extends StatefulWidget {
+class BuildShopSection extends StatelessWidget {
   final ShopChanged? onShopChanged;
-  const BuildShopSection({super.key, this.onShopChanged});
+  final TextEditingController controller;
+
+  const BuildShopSection({
+    super.key,
+    this.onShopChanged,
+    required this.controller,
+  });
 
   @override
-  State<BuildShopSection> createState() => _BuildShopSectionState();
-}
-
-class _BuildShopSectionState extends State<BuildShopSection> {
-  final shopNameController = TextEditingController();
-
-  @override
-  void dispose() {
-    shopNameController.dispose();
-    super.dispose();
-  }
-
-  Widget _buildShopSelector(BuildContext context) {
+  Widget build(BuildContext context) {
     return BuildTextField(
       label: 'Shop Name',
-      controller: shopNameController,
-      textStyle: TextStyle(
+      controller: controller,
+      textStyle: const TextStyle(
         color: Colors.white,
         fontFamily: 'Main Font',
         fontWeight: FontWeight.bold,
       ),
       hint: 'Select or enter shop name',
       onChanged: (val) {
-        if (widget.onShopChanged != null) {
-          widget.onShopChanged!(val);
-        }
+        onShopChanged?.call(val);
       },
       onTap: () {
-        // to do integrate Google Places autocomplete picker
+        // TODO: integrate Google Places autocomplete picker
       },
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildShopSelector(context);
   }
 }

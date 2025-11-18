@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jevvels/src/components/dashboard/button.dart';
 import 'package:jevvels/src/components/dashboard/gold_card.dart';
-import 'package:jevvels/src/components/dashboard/list_tile_dashboard.dart';
 import 'package:jevvels/src/components/dashboard/trading_view_card.dart';
 import 'package:jevvels/src/components/dashboard/portfolio_card.dart';
 import 'package:jevvels/new_entry/new_entry.dart';

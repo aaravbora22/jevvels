@@ -85,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 16.0),
                     BuildTextField(
                       label: 'Password',
+                      isPassword: true,
                       controller: _passwordController,
                       keyboardType: TextInputType.visiblePassword,
                       hint: 'Enter your password',

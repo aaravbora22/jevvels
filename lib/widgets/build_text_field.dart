@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class BuildTextField extends StatelessWidget {
+class BuildTextField extends StatefulWidget {
   final String label;
   final TextEditingController? controller;
   final String? initialValue;
@@ -10,6 +10,8 @@ class BuildTextField extends StatelessWidget {
   final String? hint;
   final VoidCallback? onTap;
   final TextStyle? textStyle;
+
+  final bool isPassword;
 
   const BuildTextField({
     super.key,
@@ -22,11 +24,26 @@ class BuildTextField extends StatelessWidget {
     this.hint,
     this.onTap,
     this.textStyle,
+    this.isPassword = false,
   });
 
-  InputDecoration _inputDecoration({String? hint}) {
+  @override
+  State<BuildTextField> createState() => _BuildTextFieldState();
+}
+
+class _BuildTextFieldState extends State<BuildTextField> {
+  bool obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // obscure only if password field
+    obscure = widget.isPassword;
+  }
+
+  InputDecoration _inputDecoration() {
     return InputDecoration(
-      hintText: hint,
+      hintText: widget.hint,
       hintStyle: const TextStyle(color: Colors.white),
       filled: true,
       fillColor: const Color(0xFF2C2B2B),
@@ -38,6 +55,19 @@ class BuildTextField extends StatelessWidget {
         borderSide: const BorderSide(color: Color(0xFFB99750), width: 2),
         borderRadius: BorderRadius.circular(10),
       ),
+
+      // 🔥 Password toggle button
+      suffixIcon: widget.isPassword
+          ? IconButton(
+              icon: Icon(
+                obscure ? Icons.visibility_off : Icons.visibility,
+                color: const Color(0xFFB99750),
+              ),
+              onPressed: () {
+                setState(() => obscure = !obscure);
+              },
+            )
+          : null,
     );
   }
 
@@ -46,32 +76,35 @@ class BuildTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'Main Font',
-              fontWeight: FontWeight.bold,
-            )),
+        Text(
+          widget.label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Main Font',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 5),
         TextFormField(
-          controller: controller,
-          initialValue: controller == null ? initialValue : null,
-          onChanged: onChanged,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          onTap: onTap,
-          style: (textStyle ??
+          obscureText: widget.isPassword ? obscure : false,
+          controller: widget.controller,
+          initialValue: widget.controller == null ? widget.initialValue : null,
+          onChanged: widget.onChanged,
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
+          keyboardType: widget.keyboardType,
+          onTap: widget.onTap,
+          style: (widget.textStyle ??
                   const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Main Font',
-                    fontSize: 16, // Default if not passed
+                    fontSize: 16,
                   ))
               .copyWith(color: Colors.white),
-          decoration: _inputDecoration(hint: hint),
+          decoration: _inputDecoration(),
           validator: (value) =>
               value == null || value.isEmpty ? 'Required' : null,
-        )
+        ),
       ],
     );
   }

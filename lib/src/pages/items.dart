@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:jevvels/powersync/powersync_connector.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:jevvels/new_entry/utils/signed_url.dart';
 
 class ItemsPage extends StatefulWidget {
   const ItemsPage({Key? key}) : super(key: key);
@@ -22,13 +23,16 @@ class _ItemsPageState extends State<ItemsPage> {
 
   /// 🔗 Build a Supabase Storage URL for an item image
   /// item_image_path should be something like: 'items/<uuid>.jpg'
-  String? _getItemImageUrl(String? storagePath) {
-    if (storagePath == null || storagePath.isEmpty) return null;
+  // String? _getItemImageUrl(String? storagePath) {
+  //   if (storagePath == null || storagePath.isEmpty) return null;
 
-    final supabase = Supabase.instance.client;
+  //   final supabase = Supabase.instance.client;
 
-    // bucket name = 'images'
-    return supabase.storage.from('images').getPublicUrl(storagePath);
+  //   // bucket name = 'images'
+  //   return supabase.storage.from('images').getPublicUrl(storagePath);
+  // }
+  Future<String?> _getItemImageUrl(String? storagePath) {
+    return SignedUrlHelper.getSignedUrl(storagePath);
   }
 
   Future<void> _fetchItems() async {
@@ -72,6 +76,56 @@ class _ItemsPageState extends State<ItemsPage> {
     }
   }
 
+  Future<void> _showImageDialog(String url) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF272424),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: const EdgeInsets.all(16),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontFamily: 'Main Font',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _deleteItem(Map<String, dynamic> item) async {
     final itemId = item['id'];
 
@@ -95,7 +149,8 @@ class _ItemsPageState extends State<ItemsPage> {
         'SELECT path FROM bill_images WHERE id = ?',
         [billImageId],
       );
-      billImagePath = billImg.isNotEmpty ? billImg.first['path'] as String? : null;
+      billImagePath =
+          billImg.isNotEmpty ? billImg.first['path'] as String? : null;
     }
 
     if (itemImageId != null) {
@@ -103,7 +158,8 @@ class _ItemsPageState extends State<ItemsPage> {
         'SELECT path FROM item_images WHERE id = ?',
         [itemImageId],
       );
-      itemImagePath = itemImg.isNotEmpty ? itemImg.first['path'] as String? : null;
+      itemImagePath =
+          itemImg.isNotEmpty ? itemImg.first['path'] as String? : null;
     }
 
     // 🔥 Delete from Supabase Storage (images bucket)
@@ -317,14 +373,43 @@ class _ItemsPageState extends State<ItemsPage> {
                           // 🧺 Item image from Supabase
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: imageUrl != null
-                                ? Image.network(
-                                    imageUrl,
+                            child: FutureBuilder<String?>(
+                              future: _getItemImageUrl(
+                                  item['item_image_path'] as String?),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Container(
+                                    width: 90,
+                                    height: 90,
+                                    color: Colors.black26,
+                                  );
+                                }
+
+                                final url = snapshot.data;
+                                if (url == null) {
+                                  return Container(
+                                    width: 90,
+                                    height: 90,
+                                    color: Colors.black26,
+                                    child: const Icon(
+                                      Icons.image,
+                                      color: Colors.white38,
+                                      size: 40,
+                                    ),
+                                  );
+                                }
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    _showImageDialog(url);
+                                  },
+                                  child: Image.network(
+                                    url,
                                     width: 90,
                                     height: 90,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
+                                    errorBuilder: (context, error, stackTrace) {
                                       return Container(
                                         width: 90,
                                         height: 90,
@@ -336,18 +421,12 @@ class _ItemsPageState extends State<ItemsPage> {
                                         ),
                                       );
                                     },
-                                  )
-                                : Container(
-                                    width: 90,
-                                    height: 90,
-                                    color: Colors.black26,
-                                    child: const Icon(
-                                      Icons.image,
-                                      color: Colors.white38,
-                                      size: 40,
-                                    ),
                                   ),
+                                );
+                              },
+                            ),
                           ),
+
                           const SizedBox(width: 18),
                           Expanded(
                             child: Column(

@@ -17,12 +17,29 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   void _signUp() {
-    context.read<AuthBloc>().add(
-          AuthSignUpRequested(_emailController.text, _passwordController.text),
-        );
+  if (_passwordController.text != _confirmPasswordController.text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Passwords do not match',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        backgroundColor: Colors.red,
+        
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return; 
   }
+
+  context.read<AuthBloc>().add(
+        AuthSignUpRequested(_emailController.text, _passwordController.text),
+      );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     const SizedBox(height: 16.0),
                     BuildTextField(
                       label: 'Password',
+                      isPassword: true,
                       controller: _passwordController,
                       keyboardType: TextInputType.visiblePassword,
                       hint: 'Create a password',
@@ -96,6 +114,21 @@ class _SignUpPageState extends State<SignUpPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 16.0),
+                    BuildTextField(
+                      label: 'Confirm Password',
+                      isPassword: true,
+                      controller: _confirmPasswordController,
+                      hint: 'Re-enter your password',
+                      maxLines: 1,
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Main Font',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const SizedBox(height: 32.0),
                     SizedBox(
                       width: double.infinity,
